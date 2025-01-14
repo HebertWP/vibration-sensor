@@ -1,0 +1,6 @@
+[submodule "components/SensorLib"]
+	path = components/SensorLib
+	url = https://github.com/lewisxhe/SensorLib.git
+[submodule "components/arduinoFFT"]
+	path = components/arduinoFFT
+	url = https://github.com/kosme/arduinoFFT.git
