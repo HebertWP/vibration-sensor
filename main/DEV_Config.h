@@ -63,6 +63,7 @@
 
 #define DEV_SDA_PIN     (6)
 #define DEV_SCL_PIN     (7)
+#define DEV_INT2_PIN    (3)
 
 #define Touch_INT_PIN   (5)
 #define Touch_RST_PIN   (13)
