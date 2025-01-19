@@ -4,11 +4,13 @@
 #include <Wire.h>
 #include "SensorQMI8658.hpp"
 
-#define BUFFER_SIZE 128
+#define SAMPLES_NUM 128
+#define NUM_READS 16
+#define TOTAL_READS NUM_READS * SAMPLES_NUM
 
-extern float vReal[BUFFER_SIZE];
-extern float vImag[BUFFER_SIZE];
-extern SemaphoreHandle_t xMutex;
+extern float reads[TOTAL_READS];
+
+extern SemaphoreHandle_t canRead;
 
 extern void initQMI8658Operation();
 

@@ -207,17 +207,16 @@ static uint32_t getEpochTimeInSecs() { return (uint32_t)time(NULL); }
 
 static void generateTelemetryPayload()
 {
-    xSemaphoreTake(xMutex, portMAX_DELAY);
+    xSemaphoreTake(canRead, portMAX_DELAY);
     JsonDocument doc;
-    for (int i = 0; i < BUFFER_SIZE; i++)
+    for (int i = 0; i < 128; i++)
     {
-        doc["data"][i] = vReal[i];
+        doc["data"][i] = reads[i];
     }
 
     doc["timestamp"] = getEpochTimeInSecs();
     serializeJson(doc, telemetry_payload);
-    Serial.println(telemetry_payload);
-    xSemaphoreGive(xMutex);
+    xSemaphoreGive(canRead);
 }
 
 static void sendTelemetry()
@@ -255,7 +254,6 @@ void vTaskSendTelemetry(void *pvParameters)
 
 extern void establishConnection()
 {
-    
     connectToWiFi();
     initializeTime();
     initializeIoTHubClient();
