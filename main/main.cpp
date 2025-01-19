@@ -46,9 +46,9 @@ extern "C" void app_main()
 
     while (true)
     {
-        xSemaphoreTake(canRead, portMAX_DELAY);
-        PrintVector(reads, (TOTAL_READS >> 1), SCL_FREQUENCY);
-        xSemaphoreGive(canRead);
+        //xSemaphoreTake(canRead, portMAX_DELAY);
+        //PrintVector(reads, (TOTAL_READS >> 1), SCL_FREQUENCY);
+        //xSemaphoreGive(canRead);
         delay(30000);
     }
 }

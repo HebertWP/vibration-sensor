@@ -55,6 +55,7 @@ void vTaskCalculatedFFT(void *pvParameters)
             vImag[i] = 0;
         }
         xSemaphoreGive(xMutex);
+        FFT.dcRemoval();
         FFT.compute(FFTDirection::Forward);
         FFT.complexToMagnitude();
         xSemaphoreGive(canRead);
