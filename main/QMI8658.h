@@ -6,7 +6,7 @@
 
 #define SAMPLES_NUM 128
 #define NUM_READS 16
-#define TOTAL_READS NUM_READS * SAMPLES_NUM
+#define TOTAL_READS (NUM_READS * SAMPLES_NUM)
 
 extern float reads[TOTAL_READS];
 

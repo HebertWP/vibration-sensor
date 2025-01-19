@@ -52,15 +52,11 @@ void vTaskCalculatedFFT(void *pvParameters)
         for (int i = 0; i < TOTAL_READS; i++)
         {
             reads[i] = acceleration[i].z * GRAVITY;
+            vImag[i] = 0;
         }
         xSemaphoreGive(xMutex);
         FFT.compute(FFTDirection::Forward);
         FFT.complexToMagnitude();
-        for (int i = 0; i < TOTAL_READS; i++)
-        {
-            Serial.printf("%f,", reads[i]);
-        }
-        Serial.println();
         xSemaphoreGive(canRead);
         vTaskDelay(30000 / portTICK_PERIOD_MS);
     }
@@ -75,11 +71,7 @@ void IRAM_ATTR gpio_isr_handler()
 
 extern void initQMI8658Operation()
 {
-    for (int i = 0; i < TOTAL_READS; i++)
-    {
-        vImag[i] = 0;
-    }
-    FFT.windowing(FFTWindow::Hamming, FFTDirection::Forward);	/* Weigh data */
+    FFT.windowing(FFTWindow::Blackman_Harris, FFTDirection::Forward);
 
     qmi.setPins(DEV_INT2_PIN);
 
