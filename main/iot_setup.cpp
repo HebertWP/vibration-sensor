@@ -162,10 +162,6 @@ static void initializeIoTHubClient()
 
 static int initializeMqttClient()
 {
-    if (sasToken.Generate(SAS_TOKEN_DURATION_IN_MINUTES) != 0)
-    {
-        return 1;
-    }
     esp_mqtt_client_config_t mqtt_config;
     memset(&mqtt_config, 0, sizeof(mqtt_config));
 
@@ -174,7 +170,10 @@ static int initializeMqttClient()
     mqtt_config.credentials.client_id = mqtt_client_id;
     mqtt_config.credentials.username = mqtt_username;
 
-    mqtt_config.credentials.authentication.password = (const char *)az_span_ptr(sasToken.Get());
+    mqtt_config.credentials.authentication.certificate = IOT_CONFIG_DEVICE_CERT;
+    mqtt_config.credentials.authentication.certificate_len = (size_t)sizeof(IOT_CONFIG_DEVICE_CERT);
+    mqtt_config.credentials.authentication.key = IOT_CONFIG_DEVICE_CERT_PRIVATE_KEY;
+    mqtt_config.credentials.authentication.key_len = (size_t)sizeof(IOT_CONFIG_DEVICE_CERT_PRIVATE_KEY);
 
     mqtt_config.session.keepalive = 30;
     mqtt_config.session.disable_clean_session = 0;
@@ -186,6 +185,7 @@ static int initializeMqttClient()
 
     if (mqtt_client == NULL)
     {
+        ESP_LOGI("MQTT", "Failed to initialize MQTT client");
         return 1;
     }
 
@@ -207,7 +207,9 @@ static uint32_t getEpochTimeInSecs() { return (uint32_t)time(NULL); }
 
 static void generateTelemetryPayload()
 {
+    ESP_LOGI("Telemetry", "BEFORE xSemaphoreTake");
     xSemaphoreTake(canRead, portMAX_DELAY);
+    ESP_LOGI("Telemetry", "AFTER xSemaphoreTake");
     JsonDocument doc;
     for (int i = 0; i < 128; i++)
     {
@@ -226,9 +228,10 @@ static void sendTelemetry()
     {
         return;
     }
-
+    ESP_LOGI("Telemetry", "Sending telemetry message");
     generateTelemetryPayload();
-
+    
+    ESP_LOGI("Telemetry", "Telemetry payload: %s", telemetry_payload.c_str());
     esp_mqtt_client_publish(
             mqtt_client,
             telemetry_topic,
@@ -242,13 +245,9 @@ void vTaskSendTelemetry(void *pvParameters)
 {
     while (true)
     {
-        if (sasToken.IsExpired())
-        {
-            (void)esp_mqtt_client_destroy(mqtt_client);
-            initializeMqttClient();
-        }
         sendTelemetry();
-        delay(60000);
+        ESP_LOGI("Telemetry", "Telemetry sent");
+        delay(30000);
     }
 }
 
