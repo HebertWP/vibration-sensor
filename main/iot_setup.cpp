@@ -28,8 +28,6 @@
 #include <azure_ca.h>
 
 // Additional sample headers
-#include "AzIoTSasToken.h"
-#include "SerialLogger.h"
 #include "iot_configs.h"
 #include "QMI8658.h"
 #include <ArduinoJson.h>
