@@ -1,7 +1,7 @@
 #include "Arduino.h"
 #include <Wire.h>
 
-#include "QMI8658.h"
+#include "QMI8658_setup.h"
 #include "arduinoFFT.h"
 #include "SensorQMI8658.hpp"
 #include "DEV_Config.h"
@@ -68,7 +68,7 @@ void IRAM_ATTR gpio_isr_handler()
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
-extern void initQMI8658Operation()
+extern void setupQMI8658()
 {
     FFT.windowing(FFTWindow::Blackman_Harris, FFTDirection::Forward);
 

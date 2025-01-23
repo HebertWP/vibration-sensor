@@ -1,5 +1,5 @@
-#ifndef QMI8658_H
-#define QMI8658_H
+#ifndef QMI8658_SETUP_H
+#define QMI8658_SETUP_H
 
 #include <Wire.h>
 #include "SensorQMI8658.hpp"
@@ -12,6 +12,6 @@ extern float reads[TOTAL_READS];
 
 extern SemaphoreHandle_t canRead;
 
-extern void initQMI8658Operation();
+extern void setupQMI8658();
 
-#endif // QMI8658_H
+#endif

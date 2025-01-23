@@ -29,7 +29,7 @@
 
 // Additional sample headers
 #include "iot_configs.h"
-#include "QMI8658.h"
+#include "QMI8658_setup.h"
 #include <ArduinoJson.h>
 
 // When developing for your own Arduino-based platform,
@@ -289,7 +289,7 @@ void vTaskSendTelemetry(void *pvParameters)
     }
 }
 
-extern void establishConnection()
+extern void setupIOT()
 {
     connectToWiFi();
     initializeTime();
