@@ -15,6 +15,11 @@
 ****************************************************************************/
 
 
+#include <sys/unistd.h>
+#include <sys/stat.h>
+#include "esp_err.h"
+#include "esp_spiffs.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
@@ -554,9 +559,28 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
 extern "C" void app_main(void)
 {
     esp_err_t ret;
+    esp_vfs_spiffs_conf_t conf = {
+      .base_path = "/spiffs",
+      .partition_label = NULL,
+      .max_files = 5,
+      .format_if_mount_failed = true
+    };
+
+    ret = esp_vfs_spiffs_register(&conf);
+
+    if (ret != ESP_OK) {
+        if (ret == ESP_FAIL) {
+            ESP_LOGE("TAG", "Failed to mount or format filesystem");
+        } else if (ret == ESP_ERR_NOT_FOUND) {
+            ESP_LOGE("TAG", "Failed to find SPIFFS partition");
+        } else {
+            ESP_LOGE("TAG", "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+        }
+        return;
+    }
+
     initArduino();
     Serial.begin(115200);
-
     
     /* Initialize NVS. */
     ret = nvs_flash_init();

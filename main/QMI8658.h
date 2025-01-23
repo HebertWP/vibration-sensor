@@ -5,7 +5,7 @@
 #include "SensorQMI8658.hpp"
 
 #define SAMPLES_NUM 128
-#define NUM_READS 16
+#define NUM_READS 8
 #define TOTAL_READS (NUM_READS * SAMPLES_NUM)
 
 extern float reads[TOTAL_READS];

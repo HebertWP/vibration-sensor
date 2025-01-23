@@ -25,21 +25,19 @@ ArduinoFFT<float> FFT = ArduinoFFT<float>(reads, vImag, TOTAL_READS, FREQUENCY);
 
 void vTaskReadDataFromSensorBuffer(void *pvParameters)
 {
-    uint8_t inRead = 0;
+    vTaskSuspend(NULL);
     while (true)
     {
-        vTaskSuspend(NULL);
-        if (inRead == 0)
+        qmi.readFromFifo(acceleration, SAMPLES_NUM, NULL, 0);
+        xSemaphoreTake(xMutex, portMAX_DELAY);
+        for(int i = 0; i < NUM_READS; i++)
         {
-            xSemaphoreTake(xMutex, portMAX_DELAY);
+            ESP_LOGI("QMI8658", "Reading data from sensor");
+            qmi.readFromFifo(&acceleration[i * SAMPLES_NUM], SAMPLES_NUM, NULL, 0);
+            vTaskSuspend(NULL);
         }
-        qmi.readFromFifo(&acceleration[inRead * SAMPLES_NUM], SAMPLES_NUM, NULL, 0);
-        inRead++;
-        if (inRead == NUM_READS)
-        {
-            inRead = 0;
-            xSemaphoreGive(xMutex);
-        }
+        xSemaphoreGive(xMutex);
+        vTaskDelay(30000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -97,6 +95,6 @@ extern void initQMI8658Operation()
     qmi.enableINT(SensorQMI8658::INTERRUPT_PIN_1, false);
     qmi.enableINT(SensorQMI8658::INTERRUPT_PIN_2, true);
     pinMode(DEV_INT2_PIN, INPUT);
-    xTaskCreate(vTaskReadDataFromSensorBuffer, "ReadTask", 20024, NULL, 1, &readDataHandle);
-    xTaskCreatePinnedToCore(vTaskCalculatedFFT, "FFTTask", 20024, NULL, 1, &calculateFFTHandle, 0);
+    xTaskCreatePinnedToCore(vTaskReadDataFromSensorBuffer, "ReadTask", 20480, NULL, 1, &readDataHandle, 1);
+    xTaskCreatePinnedToCore(vTaskCalculatedFFT, "FFTTask", 20480, NULL, 1, &calculateFFTHandle, 1);
 }

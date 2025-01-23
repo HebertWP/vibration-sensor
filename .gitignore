@@ -125,3 +125,5 @@ cython_debug/
 *.defaults
 *.old
 /.vscode
+
+/certs

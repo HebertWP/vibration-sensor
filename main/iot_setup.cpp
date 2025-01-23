@@ -1,3 +1,17 @@
+#include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
+#include "esp_system.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
+#include "esp_log.h"
+#include "nvs_flash.h"
+
+#include "lwip/err.h"
+#include "lwip/sys.h"
+
+
 #include "iot_setup.h"
 // C99 libraries
 #include <cstdlib>
@@ -41,9 +55,9 @@
 // Translate iot_configs.h defines into variables used by the sample
 static const char *ssid = IOT_CONFIG_WIFI_SSID;
 static const char *password = IOT_CONFIG_WIFI_PASSWORD;
-static const char *host = IOT_CONFIG_IOTHUB_FQDN;
-static const char *mqtt_broker_uri = "mqtts://" IOT_CONFIG_IOTHUB_FQDN;
-static const char *device_id = IOT_CONFIG_DEVICE_ID;
+DynamicJsonDocument deviceDocument(1024);
+char certificate[2048];
+char key[2048];
 static const int mqtt_port = AZ_IOT_DEFAULT_MQTT_CONNECT_PORT;
 
 // Memory allocated for the sample's variables and structures.
@@ -61,14 +75,6 @@ static String telemetry_payload = "{}";
 #define INCOMING_DATA_BUFFER_SIZE 128
 static char incoming_data[INCOMING_DATA_BUFFER_SIZE];
 
-// Auxiliary functions
-#ifndef IOT_CONFIG_USE_X509_CERT
-static AzIoTSasToken sasToken(
-    &client,
-    AZ_SPAN_FROM_STR(IOT_CONFIG_DEVICE_KEY),
-    AZ_SPAN_FROM_BUFFER(sas_signature_buffer),
-    AZ_SPAN_FROM_BUFFER(mqtt_password));
-#endif // IOT_CONFIG_USE_X509_CERT
 
 static void connectToWiFi()
 {
@@ -131,9 +137,17 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     }
 }
-
+ 
 static void initializeIoTHubClient()
 {
+    FILE* f = fopen("/spiffs/device_config.json", "r");
+    char line[128];    
+
+    fgets(line, sizeof(line), f);
+    deserializeJson(deviceDocument, line);
+    fclose(f);
+    const char *host = (const char*)deviceDocument["host"];
+    const char *device_id = (const char*)deviceDocument["device_id"];
     az_iot_hub_client_options options = az_iot_hub_client_options_default();
     options.user_agent = AZ_SPAN_FROM_STR(AZURE_SDK_CLIENT_USER_AGENT);
 
@@ -143,6 +157,7 @@ static void initializeIoTHubClient()
             az_span_create((uint8_t *)device_id, strlen(device_id)),
             &options)))
     {
+        ESP_LOGI("IoT Hub Client", "Failed to initialize IoT Hub client");
         return;
     }
 
@@ -165,15 +180,40 @@ static int initializeMqttClient()
     esp_mqtt_client_config_t mqtt_config;
     memset(&mqtt_config, 0, sizeof(mqtt_config));
 
-    mqtt_config.broker.address.uri = mqtt_broker_uri;
+    std::string uri = std::string("mqtts://") + (const char *)deviceDocument["host"];
+    mqtt_config.broker.address.uri = uri.c_str();
     mqtt_config.broker.address.port = mqtt_port;
     mqtt_config.credentials.client_id = mqtt_client_id;
     mqtt_config.credentials.username = mqtt_username;
 
-    mqtt_config.credentials.authentication.certificate = IOT_CONFIG_DEVICE_CERT;
-    mqtt_config.credentials.authentication.certificate_len = (size_t)sizeof(IOT_CONFIG_DEVICE_CERT);
-    mqtt_config.credentials.authentication.key = IOT_CONFIG_DEVICE_CERT_PRIVATE_KEY;
-    mqtt_config.credentials.authentication.key_len = (size_t)sizeof(IOT_CONFIG_DEVICE_CERT_PRIVATE_KEY);
+    FILE* f = fopen("/spiffs/ca.pem", "r");
+    char line[256];
+    int index = 0;
+    while(fgets(line, sizeof(line), f))
+    {
+        for(int i = 0; i < strlen(line); i++)
+        {
+            certificate[index++] = line[i];
+        }
+    }
+    certificate[index -1] = '\0';
+    fclose(f);
+    mqtt_config.credentials.authentication.certificate = certificate;
+    mqtt_config.credentials.authentication.certificate_len = index;
+    
+    f = fopen("/spiffs/cert_key.key", "r");
+    index = 0;
+    while(fgets(line, sizeof(line), f))
+    {
+        for(int i = 0; i < strlen(line); i++)
+        {
+            key[index++] = line[i];
+        }
+    }
+    key[index -1] = '\0';
+
+    mqtt_config.credentials.authentication.key = key;
+    mqtt_config.credentials.authentication.key_len = index;
 
     mqtt_config.session.keepalive = 30;
     mqtt_config.session.disable_clean_session = 0;
@@ -247,7 +287,7 @@ void vTaskSendTelemetry(void *pvParameters)
     {
         sendTelemetry();
         ESP_LOGI("Telemetry", "Telemetry sent");
-        delay(30000);
+        delay(45000);
     }
 }
 

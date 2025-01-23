@@ -6,4 +6,7 @@ cmake_minimum_required(VERSION 3.16)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 include_directories(${CMAKE_SOURCE_DIR}/components/SensorLib/src)
+include_directories(${CMAKE_SOURCE_DIR}/components/azure-sdk-for-c-arduino/src)
+include_directories(${CMAKE_SOURCE_DIR}/components/arduinoFFT/src)
+include_directories(${CMAKE_SOURCE_DIR}/components/ArduinoJson/src)
 project(main)
