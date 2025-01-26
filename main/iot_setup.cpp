@@ -28,7 +28,7 @@
 #include <azure_ca.h>
 
 // Additional sample headers
-#include "iot_configs.h"
+#include "DEV_config.h"
 #include "QMI8658_setup.h"
 #include <ArduinoJson.h>
 
@@ -51,9 +51,6 @@
 #define GMT_OFFSET_SECS_DST ((PST_TIME_ZONE + PST_TIME_ZONE_DAYLIGHT_SAVINGS_DIFF) * 3600)
 
 // Translate iot_configs.h defines into variables used by the sample
-static const char *ssid = IOT_CONFIG_WIFI_SSID;
-static const char *password = IOT_CONFIG_WIFI_PASSWORD;
-DynamicJsonDocument deviceDocument(1024);
 char certificate[2048];
 char key[2048];
 static const int mqtt_port = AZ_IOT_DEFAULT_MQTT_CONNECT_PORT;
@@ -138,14 +135,8 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
  
 static void initializeIoTHubClient()
 {
-    FILE* f = fopen("/spiffs/device_config.json", "r");
-    char line[128];    
-
-    fgets(line, sizeof(line), f);
-    deserializeJson(deviceDocument, line);
-    fclose(f);
-    const char *host = (const char*)deviceDocument["host"];
-    const char *device_id = (const char*)deviceDocument["device_id"];
+    const char *host = (const char*)(*deviceDocument)["host"];
+    const char *device_id = (const char*)(*deviceDocument)["device_id"];
     az_iot_hub_client_options options = az_iot_hub_client_options_default();
     options.user_agent = AZ_SPAN_FROM_STR(AZURE_SDK_CLIENT_USER_AGENT);
 
@@ -178,7 +169,7 @@ static int initializeMqttClient()
     esp_mqtt_client_config_t mqtt_config;
     memset(&mqtt_config, 0, sizeof(mqtt_config));
 
-    std::string uri = std::string("mqtts://") + (const char *)deviceDocument["host"];
+    std::string uri = std::string("mqtts://") + (const char *)(*deviceDocument)["host"];
     mqtt_config.broker.address.uri = uri.c_str();
     mqtt_config.broker.address.port = mqtt_port;
     mqtt_config.credentials.client_id = mqtt_client_id;

@@ -4,7 +4,7 @@
 #include "QMI8658_setup.h"
 #include "arduinoFFT.h"
 #include "SensorQMI8658.hpp"
-#include "DEV_Config.h"
+#include "DEV_config.h"
 
 SensorQMI8658 qmi;
 

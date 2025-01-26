@@ -1,5 +1,5 @@
-#include <Arduino.h>
-#include <esp_spiffs.h> 
+#include <Arduino.h> 
+#include "DEV_config.h"
 
 #include "ble_setup.h"
 #include "QMI8658_setup.h"
@@ -7,32 +7,18 @@
 
 extern "C" void app_main(void)
 {
-    esp_err_t ret;
-    //Initialize SPIFFS, it's used to save the the device configuration and certificates
-    esp_vfs_spiffs_conf_t conf = {
-      .base_path = "/spiffs",
-      .partition_label = NULL,
-      .max_files = 5,
-      .format_if_mount_failed = true
-    };
-
-    ret = esp_vfs_spiffs_register(&conf);
-
-    if (ret != ESP_OK) {
-        if (ret == ESP_FAIL) {
-            ESP_LOGE("app_main", "Failed to mount or format filesystem");
-        } else if (ret == ESP_ERR_NOT_FOUND) {
-            ESP_LOGE("app_main", "Failed to find SPIFFS partition");
-        } else {
-            ESP_LOGE("app_main", "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
-        }
-        return;
-    }
-
-    //using arduino functions, to import Arduino libraries
+    esp_err_t err;
     initArduino();
     Serial.begin(115200);
-    
+    err = setupFiles();
+    if (err != ESP_OK)
+    {
+        ESP_LOGE("MAIN", "Failed to setup files");
+        ESP_LOGE("MAIN", "Error code: %s", esp_err_to_name(err));
+        ESP_LOGE("MAIN", "Restarting...");
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        esp_restart();
+    }
     setupBLE();
     setupQMI8658();
     setupIOT();
