@@ -1,63 +1,63 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C6 | ESP32-H2 | ESP32-S2 | ESP32-S3 |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | -------- | -------- |
+# Vibration Sensor Project
 
-# _Hello world example_
+## Overview
 
-This is the simplest buildable example made to be used as a template for new projects running Arduino-esp32 as an ESP-IDF component.
-See [Arduino-esp32](https://components.espressif.com/components/espressif/arduino-esp32) in ESP Registry.
+This project is designed to monitor vibrations using a sensor and communicate the data via MQTT. The project is built using the ESP32-S3 on ESP-IDF framework.
 
-## How to use example
+This project is create to be a base code to implement all the base functionalities of IOT sensor device.
 
-To create a ESP-IDF project from this example with the latest release of Arduino-esp32, you can simply run command: `idf.py create-project-from-example "espressif/arduino-esp32:hello_world"`.
-ESP-IDF will download all dependencies needed from the component registry and setup the project for you.
+## Features
 
-If you want to use cloned Arduino-esp32 repository, you can build this example directly.
-Go to the example folder `arduino-esp32/idf_component_examples/hello_world`.
-First you need to comment line 6 `pre_release: true` in examples `/main/idf_component.yml`.
-Then just run command: `idf.py build`.
+- ✅ Add Arduino as component: for easy integration of Arduino's 
+libraries.
+- ✅ Load MQTT credential from SPIFFS: for easy configuration of MQTT device in production environment and remove of credentials from code.
+- ✅ Have BLE GATT server: To allow users configure network configuration in real time.
+- ✅ RF Coexistence: To have BLE and WiFi working together.
+- ✅ Send Telemetry data to Azure IoT Hub.
+- ❌ Receive Direct message from Azure IoT Hub.
+- ❌ Receive Twin update from Azure IoT Hub.
+- ❌ HTTPS OTA update.
+- ✅ Acellerometer read.
+- ✅ FFT processing for sensor data.
+- ❌ Encrypted data in flash: To store sensitive data in flash not in plain text.
+- ❌ Backup data when no network: To store data in flash when no network is available.
+- ❌ Implement LVGL: To have on side display of data.
 
-## Example folder contents
 
-The project **hello_world** contains one source file in C++ language [main.cpp](main/main.cpp). The file is located in folder [main](main).
+## Hardware
 
-ESP-IDF projects are built using CMake. The project build configuration is contained in `CMakeLists.txt`
-files that provide set of directives and instructions describing the project's source files and targets
-(executable, library, or both).
+To facilitate the development of this project, I'm using a board from wave share:
 
-Below is short explanation of remaining files in the project folder.
+```https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-1.28```
 
-```
-├── CMakeLists.txt
-├── main
-│   ├── CMakeLists.txt
-│   ├── idf_component.yml
-│   └── main.cpp
-└── README.md                  This is the file you are currently reading
-```
+Note: This board is not on sales anymore, but you can use any ESP32-S3 board. End wave share have a even better board for this project, that have RTC and lager screen:
 
-## How to add Arduino libraries
+```https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-2.1```
 
-In the project create folder `components/` and clone the library there.
-In the library folder create new CMakeLists.txt file, add lines shown below to the file and edit the SRCS to match the library source files.
+## Software
 
-```
-idf_component_register(SRCS "user_library.cpp" "another_source.c"
-                      INCLUDE_DIRS "."
-                      REQUIRES arduino-esp32
-                      )
-```
+To develop this project, I'm using the following software:
 
-Below is structure of the project folder with the Arduino libraries.
+- Visual Studio Code: As IDE.
+- ESP-IDF: As framework.
+- Arduino: As component to use Arduino libraries.
+- Azure SDK for C Arduino: To send data to Azure IoT Hub.
+- ArduinoFFT: To process FFT data.
+- SensorLib: To read data from sensor.
+- ArduinoJson: To parse JSON data.
 
-```
-├── CMakeLists.txt
-├── components
-│   ├── user_library
-│   │   ├── CMakeLists.txt     This needs to be added
-│   │   ├── ...
-├── main
-│   ├── CMakeLists.txt
-│   ├── idf_component.yml
-│   └── main.cpp
-└── README.md                  This is the file you are currently reading
-```
+Note: The project use modules from git, so clone it using recursive.
+
+## Code notes
+
+The code use RF Coexistence, i have pinned the BLE stack in code 1 and WiFi stack in code 0. I also deactivate the software control to use hardware control of RF Coexistence, for easy code. For more information about RF Coexistence, please check the following link:
+
+```https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/coexist.html#rf-coexistence```
+
+The code use Arduino as component, so this project stars from Arduino as component template. For more information:
+
+```https://espressif-docs.readthedocs-hosted.com/projects/arduino-esp32/en/latest/esp-idf_component.html```
+
+The code use SPIFFS to store MQTT credentials, on development i add the code on the build to copy my credentials to SPIFFS. For more information:
+
+```https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/storage/spiffs.html```
