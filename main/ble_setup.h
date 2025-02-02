@@ -1,7 +1,8 @@
 #ifndef BLE_SETUP_H
 #define BLE_SETUP_H
 
-// Function to initialize BLE
-extern void setupBLE();
+#include "esp_err.h"
+
+extern esp_err_t init_ble();
 
 #endif // BLE_SETUP_H

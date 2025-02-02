@@ -1,25 +1,26 @@
-#include <Arduino.h> 
-#include "DEV_config.h"
+#include "esp_err.h"
+#include "nvs_flash.h"
+#include "esp_event.h"
+#include "esp_netif.h"
 
+#include "Arduino.h"
+
+#include "file_setup.h"
 #include "ble_setup.h"
+#include "wifi_setup.h"
 #include "QMI8658_setup.h"
-#include "iot_setup.h"
 
 extern "C" void app_main(void)
 {
-    esp_err_t err;
+    ESP_ERROR_CHECK(init_memory());
+    ESP_ERROR_CHECK(init_ble());
+    ESP_ERROR_CHECK( esp_netif_init() );
+    ESP_ERROR_CHECK( esp_event_loop_create_default() );
+    /*Allow other core to finish initialization */
+    vTaskDelay( pdMS_TO_TICKS( 100 ) );
+
     initArduino();
     Serial.begin(115200);
-    err = setupFiles();
-    if (err != ESP_OK)
-    {
-        ESP_LOGE("MAIN", "Failed to setup files");
-        ESP_LOGE("MAIN", "Error code: %s", esp_err_to_name(err));
-        ESP_LOGE("MAIN", "Restarting...");
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        esp_restart();
-    }
-    setupBLE();
     setupQMI8658();
-    setupIOT();
+    ESP_ERROR_CHECK(init_wifi());
 }
