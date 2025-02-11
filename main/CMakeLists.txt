@@ -7,7 +7,8 @@ idf_component_register(SRCS ${SOURCES}
                         nvs_flash
                         esp_wifi
                         nvs_flash
-                    REQUIRES 
+                    REQUIRES
+                        azure-iot-middleware-freertos
                         arduinoFFT
                         SensorLib
                         ArduinoJson
