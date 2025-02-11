@@ -232,3 +232,20 @@ esp_err_t init_wifi()
 
     return ESP_OK;
 }
+
+uint64_t ullGetUnixTime( void )
+{
+    time_t now = time( NULL );
+
+    if( now == ( time_t ) ( -1 ) )
+    {
+        ESP_LOGE( tag, "Failed obtaining current time.\r\n" );
+    }
+
+    return now;
+}
+
+bool xAzureSample_IsConnectedToInternet()
+{
+    return s_is_connected_to_internet;
+}
