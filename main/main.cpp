@@ -9,7 +9,7 @@
 #include "ble_setup.h"
 #include "wifi_setup.h"
 #include "QMI8658_setup.h"
-#include "sample_azure_iot_pnp.c"
+#include "sample_azure_iot_pnp.cpp"
 
 extern "C" void app_main(void)
 {

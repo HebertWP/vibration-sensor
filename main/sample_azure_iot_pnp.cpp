@@ -37,6 +37,7 @@
 #include "sample_azure_iot_pnp_data_if.h"
 
 #include "wifi_setup.h"
+#include "device_configuration.h"
 
 /**
  * @brief The maximum number of retries for network operation with server.
@@ -308,10 +309,13 @@ static void prvAzureDemoTask( void * pvParameters )
     AzureIoTHubClientOptions_t xHubOptions = { 0 };
     bool xSessionPresent;
 
-    uint8_t * pucIotHubHostname = ( uint8_t * ) democonfigHOSTNAME;
-    uint8_t * pucIotHubDeviceId = ( uint8_t * ) democonfigDEVICE_ID;
-    uint32_t pulIothubHostnameLength = sizeof( democonfigHOSTNAME ) - 1;
-    uint32_t pulIothubDeviceIdLength = sizeof( democonfigDEVICE_ID ) - 1;
+    const char *device_name = (const char*)(*g_device_document)["device_id"];
+    const char *host = (const char*)(*g_device_document)["device_id"];
+        
+    uint8_t * pucIotHubHostname = ( uint8_t * ) host;
+    uint8_t * pucIotHubDeviceId = ( uint8_t * ) device_name;
+    uint32_t pulIothubHostnameLength = strlen(host);
+    uint32_t pulIothubDeviceIdLength = strlen(device_name);
 
     ( void ) pvParameters;
 
@@ -349,8 +353,8 @@ static void prvAzureDemoTask( void * pvParameters )
             xResult = AzureIoTHubClient_OptionsInit( &xHubOptions );
             configASSERT( xResult == eAzureIoTSuccess );
 
-            xHubOptions.pucModuleID = ( const uint8_t * ) democonfigMODULE_ID;
-            xHubOptions.ulModuleIDLength = sizeof( democonfigMODULE_ID ) - 1;
+            xHubOptions.pucModuleID = ( const uint8_t * ) "";
+            xHubOptions.ulModuleIDLength = 0;
             xHubOptions.pucModelID = ( const uint8_t * ) sampleazureiotMODEL_ID;
             xHubOptions.ulModelIDLength = sizeof( sampleazureiotMODEL_ID ) - 1;
 
