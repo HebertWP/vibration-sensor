@@ -1,4 +1,4 @@
-file(GLOB_RECURSE SOURCES "*.cpp")
+file(GLOB_RECURSE SOURCES "*.c*")
 
 idf_component_register(SRCS ${SOURCES}
                     PRIV_REQUIRES 
@@ -9,6 +9,7 @@ idf_component_register(SRCS ${SOURCES}
                         nvs_flash
                     REQUIRES
                         azure-iot-middleware-freertos
+                        sample-azure-iot
                         arduinoFFT
                         SensorLib
                         ArduinoJson
