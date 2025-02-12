@@ -46,47 +46,6 @@
 /************ End of logging configuration ****************/
 
 /**
- * @brief Enable Device Provisioning
- *
- * @note To disable Device Provisioning undef this macro
- *
- */
-
-#ifdef CONFIG_ENABLE_DPS_SAMPLE
-    #define democonfigENABLE_DPS_SAMPLE
-#endif
-
-#ifdef democonfigENABLE_DPS_SAMPLE
-
-/**
- * @brief Provisioning service endpoint.
- *
- * @note https://docs.microsoft.com/azure/iot-dps/concepts-service#service-operations-endpoint
- *
- */
-    #define democonfigENDPOINT           "global.azure-devices-provisioning.net"
-
-/**
- * @brief Id scope of provisioning service.
- *
- * @note https://docs.microsoft.com/azure/iot-dps/concepts-service#id-scope
- *
- */
-    #define democonfigID_SCOPE           CONFIG_AZURE_DPS_ID_SCOPE
-
-/**
- * @brief Registration Id of provisioning service
- *
- * @warning If using X509 authentication, this MUST match the Common Name of the cert.
- *
- *  @note https://docs.microsoft.com/azure/iot-dps/concepts-service#registration-id
- */
-    #define democonfigREGISTRATION_ID    CONFIG_AZURE_DPS_REGISTRATION_ID
-
-
-#endif /* democonfigENABLE_DPS_SAMPLE */
-
-/**
  * @brief IoTHub device Id.
  *
  */
@@ -106,85 +65,6 @@
 #define democonfigHOSTNAME     CONFIG_AZURE_IOT_HUB_FQDN
 
 /**
- * @brief Device symmetric key
- *
- */
-#ifdef CONFIG_AZURE_IOT_DEVICE_SYMMETRIC_KEY
-    #define democonfigDEVICE_SYMMETRIC_KEY    CONFIG_AZURE_IOT_DEVICE_SYMMETRIC_KEY
-#endif
-
-#define MY_CERT                                                            \
-    "-----BEGIN CERTIFICATE-----\r\n"                                      \
-    "MIIDczCCAlugAwIBAgIQDYOJvniK8PKGfb3gUfNtAjANBgkqhkiG9w0BAQsFADAY\r\n" \
-    "MRYwFAYDVQQDDA1NeU9yZyBSb290IENBMB4XDTI1MDEyMTAyMzIwMVoXDTM1MDEx\r\n" \
-    "OTAyMzIwMVowXDELMAkGA1UEBhMCQlIxCzAJBgNVBAgMAlNQMQowCAYDVQQKDAFQ\r\n" \
-    "MQswCQYDVQQLDAJJVDEVMBMGA1UEAwwMbXlpb3RkZXZpY2UxMRAwDgYJKoZIhvcN\r\n" \
-    "AQkBFgFxMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxChzQbtgKIgt\r\n" \
-    "3qb2Bjqq3aO3atBZaa6rFDLItBxUeg1p2g2hYAA64ANMLTSM6ktiBImuSZhhm2hr\r\n" \
-    "RuJbr4KdS+mr1zL8431t6nrZFlCuO3pP8oocxRRhcAP8YgR15P0DzBMRGnEsvtjE\r\n" \
-    "z6MMuUNm0zW4w59BFJoFIazMUJS8cGe+pdOI/FwrFyZIFs6M0JIn9T3TKT9itBZG\r\n" \
-    "QtowYKMuGLEDm/vUCSSFCmu9AxTzDJ2YJfEmprqP4lEyYA/LJB7OWGe+PIvH4HDj\r\n" \
-    "PoE04AoAFbj6BkGhPNrIxB2DBB52mNirRkWjeUnWg4D6GcBuTGo6yKyH3fWa3kmB\r\n" \
-    "JwBx5WTgowIDAQABo3UwczAfBgNVHSMEGDAWgBRDKpQfXz0PDYXZp43A2LdtxW7W\r\n" \
-    "BjAMBgNVHRMBAf8EAjAAMBMGA1UdJQQMMAoGCCsGAQUFBwMCMA4GA1UdDwEB/wQE\r\n" \
-    "AwIHgDAdBgNVHQ4EFgQUqQ9b5S6aMsIRcfMEszpqPMab06YwDQYJKoZIhvcNAQEL\r\n" \
-    "BQADggEBAFmFN4dpk8WnAVje8dQg+QuTXbcW8sjEe6SochThUuzW0zJeiqDoondi\r\n" \
-    "8439URKNkgT1hwzZZMA0qJd5GhPZ45jxFXkr7dIAW32SvpjiC+fKHoMZ/5m2dyZB\r\n" \
-    "kAt/vzP46IcEUp3xeY0NKajbN2NqVBtmblHEzDAZXo0MoxAmyaurZzB9AEia5IZY\r\n" \
-    "c93Kw/Xr7F2N6bI8Z0vLfOVlCac3xG7wGvP7gdDQCFyYah7nQ6Pnvc3mcm1rMdyn\r\n" \
-    "/8FP8U06jhsUDyy6BKVbN5KYu0OhHMldhpeQb/cN195Hon//dc29MxnOet+KHnGv\r\n" \
-    "td1POU3StqE6y0c0L1edyRALXZ5OVa4=\r\n" \
-    "-----END CERTIFICATE-----\r\n"
-
-
-#define MY_CERT_PRIVATE_KEY                                                \
-    "-----BEGIN PRIVATE KEY-----\r\n"                                      \
-    "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDEKHNBu2AoiC3e\r\n" \
-    "pvYGOqrdo7dq0FlprqsUMsi0HFR6DWnaDaFgADrgA0wtNIzqS2IEia5JmGGbaGtG\r\n" \
-    "4luvgp1L6avXMvzjfW3qetkWUK47ek/yihzFFGFwA/xiBHXk/QPMExEacSy+2MTP\r\n" \
-    "owy5Q2bTNbjDn0EUmgUhrMxQlLxwZ76l04j8XCsXJkgWzozQkif1PdMpP2K0FkZC\r\n" \
-    "2jBgoy4YsQOb+9QJJIUKa70DFPMMnZgl8Samuo/iUTJgD8skHs5YZ748i8fgcOM+\r\n" \
-    "gTTgCgAVuPoGQaE82sjEHYMEHnaY2KtGRaN5SdaDgPoZwG5MajrIrIfd9ZreSYEn\r\n" \
-    "AHHlZOCjAgMBAAECggEAA+LzSamfQZ5VHlS7iisOaJ7OSwj+xIfH7voEnQD0sYhj\r\n" \
-    "gQUFHgRTJk4aa8jfQ+MjeYiK0f15bZ1XhsuEWolheXgTRgvGE/HPxDYT6AvIL/h/\r\n" \
-    "7gPLhyIcvh3uGbkR5uwWb6wvChGU++EKoTyPS3po5qVpWELnBLP6hwzH7Y7M3wM+\r\n" \
-    "UaePa4i2h3WvFVYBVqLxSpsQXfigS2TsrYidos7oAsTRW+6MH+z7NBVwrY3zBDE4\r\n" \
-    "iBXDrzfOmXGFcX+iv2D4f8dRvgIYXKLWInRux0Zo4QoBtR+v6r7KWgcniaTKvMn6\r\n" \
-    "UkWusi3hEvIUO7sbKffsNFzxOZ7faFAG14FNiKpY4QKBgQDqdlurS6QDMLW5B/0h\r\n" \
-    "BsYtiQRKELI/98k6Ad3XKgF5UXU8c1/FyOmuzqdnsqeyTNVUpO1ey2xZtu+HWzdR\r\n" \
-    "cMtzOlqs/mql/X9iv1BlmYK77GoccWEwJfpH4D544T3sPfl0lG76Ix3mo64hzmyl\r\n" \
-    "KOr+oIspq2HfzskkKNFbXa03YQKBgQDWLVLJdrsZxRRIq9S8/IH2XySLWzCFZ8dd\r\n" \
-    "ljIJ4BMBPPdXbHKklWDDS1BCMQ4D5nnA7hRJyEg8CNs70nVCmBNnlllDDqXwWyqG\r\n" \
-    "DuZwHAFe4qbxd9FaCTuRY1Pv2z8Y+jnIVvOM4CmFcpJwoWpIFsODeAvDOY6ALLFT\r\n" \
-    "IQ0SZW/KgwKBgQC2aZcwUg0snj0D0/9QLqEI1E0OAqdrtTBNfR5HRFsZNBLuESU2\r\n" \
-    "D/YfFpCP0SM/SR/AVwCGe+W0dussd/810Xe4EnJxnQ8ETZFKFmZKZYCdDHYR4vQm\r\n" \
-    "LaXnPcPc8ADpR95IoSMmYSPmSPo1OxCz/n211NnwdXIUWiGLjGY1m1AkgQKBgFRB\r\n" \
-    "pE3pTZXHuEEWiCyI0b/QkhnYl/ADcaTZj3nfEtrr1wonebpRoa1ylXJUxgS2yLMj\r\n" \
-    "dgvIpNIpUcXo94RpO0kHFrqQqqsx0jrG5dS4z7k6RR69WjinZS2++6higiIbXlv4\r\n" \
-    "CPwku3DqL73rYlpVyjiQI2B75hl6e5AOcowIJ8BtAoGAP8J3+f3o1lba8Bw2Aon3\r\n" \
-    "a6339JAQTWUg2AIw2YniMJFAg79wvFyHINPevaYozwN0SLLwlS/HB5daDW3ovHqR\r\n" \
-    "OBs2fHrBhDNY7H/Leg51xIGheP/y90PEma6q0XScxbG1w6fXgTkaGPA2ymi/7fEQ\r\n" \
-    "oPtTIRmqYI5dajq78RUOuqs=\r\n" \
-    "-----END PRIVATE KEY-----\r\n"
-
-/**
- * @brief Client's X509 Certificate.
- *
- */
-#ifdef CONFIG_AZURE_IOT_DEVICE_CLIENT_CERTIFICATE
-    #define democonfigCLIENT_CERTIFICATE_PEM    MY_CERT
-#endif
-
-
-/**
- * @brief Client's private key.
- *
- */
-#ifdef CONFIG_AZURE_IOT_DEVICE_CLIENT_CERTIFICATE_PRIVATE_KEY
-    #define democonfigCLIENT_PRIVATE_KEY_PEM    MY_CERT_PRIVATE_KEY
-#endif
-
-/**
  * @brief Load the required certificates:
  *  - Baltimore Trusted Root CA
  *  - DigiCert Global Root G2
@@ -196,82 +76,82 @@
  *
  */
 #define democonfigROOT_CA_PEM                                              \
-    "-----BEGIN CERTIFICATE-----\r\n"                                      \
-    "MIIDdzCCAl+gAwIBAgIEAgAAuTANBgkqhkiG9w0BAQUFADBaMQswCQYDVQQGEwJJ\r\n" \
-    "RTESMBAGA1UEChMJQmFsdGltb3JlMRMwEQYDVQQLEwpDeWJlclRydXN0MSIwIAYD\r\n" \
-    "VQQDExlCYWx0aW1vcmUgQ3liZXJUcnVzdCBSb290MB4XDTAwMDUxMjE4NDYwMFoX\r\n" \
-    "DTI1MDUxMjIzNTkwMFowWjELMAkGA1UEBhMCSUUxEjAQBgNVBAoTCUJhbHRpbW9y\r\n" \
-    "ZTETMBEGA1UECxMKQ3liZXJUcnVzdDEiMCAGA1UEAxMZQmFsdGltb3JlIEN5YmVy\r\n" \
-    "VHJ1c3QgUm9vdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKMEuyKr\r\n" \
-    "mD1X6CZymrV51Cni4eiVgLGw41uOKymaZN+hXe2wCQVt2yguzmKiYv60iNoS6zjr\r\n" \
-    "IZ3AQSsBUnuId9Mcj8e6uYi1agnnc+gRQKfRzMpijS3ljwumUNKoUMMo6vWrJYeK\r\n" \
-    "mpYcqWe4PwzV9/lSEy/CG9VwcPCPwBLKBsua4dnKM3p31vjsufFoREJIE9LAwqSu\r\n" \
-    "XmD+tqYF/LTdB1kC1FkYmGP1pWPgkAx9XbIGevOF6uvUA65ehD5f/xXtabz5OTZy\r\n" \
-    "dc93Uk3zyZAsuT3lySNTPx8kmCFcB5kpvcY67Oduhjprl3RjM71oGDHweI12v/ye\r\n" \
-    "jl0qhqdNkNwnGjkCAwEAAaNFMEMwHQYDVR0OBBYEFOWdWTCCR1jMrPoIVDaGezq1\r\n" \
-    "BE3wMBIGA1UdEwEB/wQIMAYBAf8CAQMwDgYDVR0PAQH/BAQDAgEGMA0GCSqGSIb3\r\n" \
-    "DQEBBQUAA4IBAQCFDF2O5G9RaEIFoN27TyclhAO992T9Ldcw46QQF+vaKSm2eT92\r\n" \
-    "9hkTI7gQCvlYpNRhcL0EYWoSihfVCr3FvDB81ukMJY2GQE/szKN+OMY3EU/t3Wgx\r\n" \
-    "jkzSswF07r51XgdIGn9w/xZchMB5hbgF/X++ZRGjD8ACtPhSNzkE1akxehi/oCr0\r\n" \
-    "Epn3o0WC4zxe9Z2etciefC7IpJ5OCBRLbf1wbWsaY71k5h+3zvDyny67G7fyUIhz\r\n" \
-    "ksLi4xaNmjICq44Y3ekQEe5+NauQrz4wlHrQMz2nZQ/1/I6eYs9HRCwBXbsdtTLS\r\n" \
-    "R9I4LtD+gdwyah617jzV/OeBHRnDJELqYzmp\r\n"                             \
-    "-----END CERTIFICATE-----\r\n"                                        \
-    "-----BEGIN CERTIFICATE-----\r\n"                                      \
-    "MIIDjjCCAnagAwIBAgIQAzrx5qcRqaC7KGSxHQn65TANBgkqhkiG9w0BAQsFADBh\r\n" \
-    "MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\r\n" \
-    "d3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBH\r\n" \
-    "MjAeFw0xMzA4MDExMjAwMDBaFw0zODAxMTUxMjAwMDBaMGExCzAJBgNVBAYTAlVT\r\n" \
-    "MRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j\r\n" \
-    "b20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IEcyMIIBIjANBgkqhkiG\r\n" \
-    "9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuzfNNNx7a8myaJCtSnX/RrohCgiN9RlUyfuI\r\n" \
-    "2/Ou8jqJkTx65qsGGmvPrC3oXgkkRLpimn7Wo6h+4FR1IAWsULecYxpsMNzaHxmx\r\n" \
-    "1x7e/dfgy5SDN67sH0NO3Xss0r0upS/kqbitOtSZpLYl6ZtrAGCSYP9PIUkY92eQ\r\n" \
-    "q2EGnI/yuum06ZIya7XzV+hdG82MHauVBJVJ8zUtluNJbd134/tJS7SsVQepj5Wz\r\n" \
-    "tCO7TG1F8PapspUwtP1MVYwnSlcUfIKdzXOS0xZKBgyMUNGPHgm+F6HmIcr9g+UQ\r\n" \
-    "vIOlCsRnKPZzFBQ9RnbDhxSJITRNrw9FDKZJobq7nMWxM4MphQIDAQABo0IwQDAP\r\n" \
-    "BgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBhjAdBgNVHQ4EFgQUTiJUIBiV\r\n" \
-    "5uNu5g/6+rkS7QYXjzkwDQYJKoZIhvcNAQELBQADggEBAGBnKJRvDkhj6zHd6mcY\r\n" \
-    "1Yl9PMWLSn/pvtsrF9+wX3N3KjITOYFnQoQj8kVnNeyIv/iPsGEMNKSuIEyExtv4\r\n" \
-    "NeF22d+mQrvHRAiGfzZ0JFrabA0UWTW98kndth/Jsw1HKj2ZL7tcu7XUIOGZX1NG\r\n" \
-    "Fdtom/DzMNU+MeKNhJ7jitralj41E6Vf8PlwUHBHQRFXGU7Aj64GxJUTFy8bJZ91\r\n" \
-    "8rGOmaFvE7FBcf6IKshPECBV1/MUReXgRPTqh5Uykw7+U0b6LJ3/iyK5S9kJRaTe\r\n" \
-    "pLiaWN0bfVKfjllDiIGknibVb63dDcY3fe0Dkhvld1927jyNxF1WW6LZZm6zNTfl\r\n" \
-    "MrY=\r\n"                                                             \
-    "-----END CERTIFICATE-----\r\n"                                        \
-    "-----BEGIN CERTIFICATE-----\r\n"                                      \
-    "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\r\n" \
-    "RA+GsCyRxj3qrg+E\r\n"                                                 \
-    "-----END CERTIFICATE-----\r\n"
+    "-----BEGIN CERTIFICATE-----\n"                                      \
+    "MIIDdzCCAl+gAwIBAgIEAgAAuTANBgkqhkiG9w0BAQUFADBaMQswCQYDVQQGEwJJ\n" \
+    "RTESMBAGA1UEChMJQmFsdGltb3JlMRMwEQYDVQQLEwpDeWJlclRydXN0MSIwIAYD\n" \
+    "VQQDExlCYWx0aW1vcmUgQ3liZXJUcnVzdCBSb290MB4XDTAwMDUxMjE4NDYwMFoX\n" \
+    "DTI1MDUxMjIzNTkwMFowWjELMAkGA1UEBhMCSUUxEjAQBgNVBAoTCUJhbHRpbW9y\n" \
+    "ZTETMBEGA1UECxMKQ3liZXJUcnVzdDEiMCAGA1UEAxMZQmFsdGltb3JlIEN5YmVy\n" \
+    "VHJ1c3QgUm9vdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKMEuyKr\n" \
+    "mD1X6CZymrV51Cni4eiVgLGw41uOKymaZN+hXe2wCQVt2yguzmKiYv60iNoS6zjr\n" \
+    "IZ3AQSsBUnuId9Mcj8e6uYi1agnnc+gRQKfRzMpijS3ljwumUNKoUMMo6vWrJYeK\n" \
+    "mpYcqWe4PwzV9/lSEy/CG9VwcPCPwBLKBsua4dnKM3p31vjsufFoREJIE9LAwqSu\n" \
+    "XmD+tqYF/LTdB1kC1FkYmGP1pWPgkAx9XbIGevOF6uvUA65ehD5f/xXtabz5OTZy\n" \
+    "dc93Uk3zyZAsuT3lySNTPx8kmCFcB5kpvcY67Oduhjprl3RjM71oGDHweI12v/ye\n" \
+    "jl0qhqdNkNwnGjkCAwEAAaNFMEMwHQYDVR0OBBYEFOWdWTCCR1jMrPoIVDaGezq1\n" \
+    "BE3wMBIGA1UdEwEB/wQIMAYBAf8CAQMwDgYDVR0PAQH/BAQDAgEGMA0GCSqGSIb3\n" \
+    "DQEBBQUAA4IBAQCFDF2O5G9RaEIFoN27TyclhAO992T9Ldcw46QQF+vaKSm2eT92\n" \
+    "9hkTI7gQCvlYpNRhcL0EYWoSihfVCr3FvDB81ukMJY2GQE/szKN+OMY3EU/t3Wgx\n" \
+    "jkzSswF07r51XgdIGn9w/xZchMB5hbgF/X++ZRGjD8ACtPhSNzkE1akxehi/oCr0\n" \
+    "Epn3o0WC4zxe9Z2etciefC7IpJ5OCBRLbf1wbWsaY71k5h+3zvDyny67G7fyUIhz\n" \
+    "ksLi4xaNmjICq44Y3ekQEe5+NauQrz4wlHrQMz2nZQ/1/I6eYs9HRCwBXbsdtTLS\n" \
+    "R9I4LtD+gdwyah617jzV/OeBHRnDJELqYzmp\n"                             \
+    "-----END CERTIFICATE-----\n"                                        \
+    "-----BEGIN CERTIFICATE-----\n"                                      \
+    "MIIDjjCCAnagAwIBAgIQAzrx5qcRqaC7KGSxHQn65TANBgkqhkiG9w0BAQsFADBh\n" \
+    "MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\n" \
+    "d3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBH\n" \
+    "MjAeFw0xMzA4MDExMjAwMDBaFw0zODAxMTUxMjAwMDBaMGExCzAJBgNVBAYTAlVT\n" \
+    "MRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j\n" \
+    "b20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IEcyMIIBIjANBgkqhkiG\n" \
+    "9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuzfNNNx7a8myaJCtSnX/RrohCgiN9RlUyfuI\n" \
+    "2/Ou8jqJkTx65qsGGmvPrC3oXgkkRLpimn7Wo6h+4FR1IAWsULecYxpsMNzaHxmx\n" \
+    "1x7e/dfgy5SDN67sH0NO3Xss0r0upS/kqbitOtSZpLYl6ZtrAGCSYP9PIUkY92eQ\n" \
+    "q2EGnI/yuum06ZIya7XzV+hdG82MHauVBJVJ8zUtluNJbd134/tJS7SsVQepj5Wz\n" \
+    "tCO7TG1F8PapspUwtP1MVYwnSlcUfIKdzXOS0xZKBgyMUNGPHgm+F6HmIcr9g+UQ\n" \
+    "vIOlCsRnKPZzFBQ9RnbDhxSJITRNrw9FDKZJobq7nMWxM4MphQIDAQABo0IwQDAP\n" \
+    "BgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwIBhjAdBgNVHQ4EFgQUTiJUIBiV\n" \
+    "5uNu5g/6+rkS7QYXjzkwDQYJKoZIhvcNAQELBQADggEBAGBnKJRvDkhj6zHd6mcY\n" \
+    "1Yl9PMWLSn/pvtsrF9+wX3N3KjITOYFnQoQj8kVnNeyIv/iPsGEMNKSuIEyExtv4\n" \
+    "NeF22d+mQrvHRAiGfzZ0JFrabA0UWTW98kndth/Jsw1HKj2ZL7tcu7XUIOGZX1NG\n" \
+    "Fdtom/DzMNU+MeKNhJ7jitralj41E6Vf8PlwUHBHQRFXGU7Aj64GxJUTFy8bJZ91\n" \
+    "8rGOmaFvE7FBcf6IKshPECBV1/MUReXgRPTqh5Uykw7+U0b6LJ3/iyK5S9kJRaTe\n" \
+    "pLiaWN0bfVKfjllDiIGknibVb63dDcY3fe0Dkhvld1927jyNxF1WW6LZZm6zNTfl\n" \
+    "MrY=\n"                                                             \
+    "-----END CERTIFICATE-----\n"                                        \
+    "-----BEGIN CERTIFICATE-----\n"                                      \
+    "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\n" \
+    "RA+GsCyRxj3qrg+E\n"                                                 \
+    "-----END CERTIFICATE-----\n"
 
 /**
  * @brief Set the stack size of the main demo task.
@@ -293,30 +173,5 @@
  * @brief Defines configRAND32, used by the common sample modules.
  */
 #define configRAND32()    ( rand() / RAND_MAX )
-
-/**
- * @brief Defines the macro for HSM usage depending on whether
- * the support for ATECC608 is enabled in the kconfig menu
- */
-#ifdef CONFIG_ESP_TLS_USE_SECURE_ELEMENT
-    #if CONFIG_MBEDTLS_ATCA_HW_ECDSA_SIGN & CONFIG_MBEDTLS_ATCA_HW_ECDSA_VERIFY
-        #define democonfigUSE_HSM
-
-/**
- * @brief Dynamically generate and write the registration ID as a
- *  string into the passed pointer
- *
- * @param[in,out] ppcRegistrationId Input: Pointer to a null pointer,
- *                      Output: Pointer to a null-terminated string
- *
- * @return  1  if the input is not a pointer to a NULL pointer,
- *          2  if we are not able to talk to the HSM
- *          3  if something else went wrong (eg: memory allocation failed)
- *          0   if everything went through correctly
- */
-
-        uint32_t getRegistrationId( char ** ppcRegistrationId );
-    #endif
-#endif /* CONFIG_ESP_TLS_USE_SECURE_ELEMENT */
 
 #endif /* DEMO_CONFIG_H */
