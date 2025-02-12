@@ -105,14 +105,6 @@
 char g_certificate[2048];
 char g_key[2048];
 
-/**
- * @brief Unix time.
- *
- * @return Time in milliseconds.
- */
-uint64_t ullGetUnixTime( void );
-/*-----------------------------------------------------------*/
-
 /* Each compilation unit must define the NetworkContext struct. */
 struct NetworkContext
 {
@@ -192,7 +184,6 @@ static void prvHandleCommand( AzureIoTHubClientCommandRequest_t * pxMessage,
         LogInfo( ( "Successfully sent command response %d", ( int16_t ) ulResponseStatus ) );
     }
 }
-
 
 static void prvDispatchPropertiesUpdate( AzureIoTHubClientPropertiesResponse_t * pxMessage )
 {
@@ -331,7 +322,6 @@ static void prvAzureDemoTask( void * pvParameters )
     {
         if( xAzureSample_IsConnectedToInternet() )
         {
-            LogInfo(("Free heap size: %d\n\n", (int)esp_get_free_heap_size()));
             /* Attempt to establish TLS session with IoT Hub. If connection fails,
              * retry after a timeout. Timeout value will be exponentially increased
              * until  the maximum number of attempts are reached or the maximum timeout
@@ -341,7 +331,6 @@ static void prvAzureDemoTask( void * pvParameters )
             ulStatus = prvConnectToServerWithBackoffRetries( ( const char * ) pucIotHubHostname,
                                                              democonfigIOTHUB_PORT,
                                                              &xNetworkCredentials, &xNetworkContext );
-            LogInfo(("2Free heap size: %d\n\n", (int)esp_get_free_heap_size()));
             configASSERT( ulStatus == 0 );
 
             /* Fill in Transport Interface send and receive function pointers. */
