@@ -46,25 +46,6 @@
 /************ End of logging configuration ****************/
 
 /**
- * @brief IoTHub device Id.
- *
- */
-#define democonfigDEVICE_ID    CONFIG_AZURE_IOT_DEVICE_ID
-
-/**
- * @brief IoTHub module Id.
- *
- * @note This is optional argument for IoTHub
- */
-#define democonfigMODULE_ID    CONFIG_AZURE_IOT_MODULE_ID
-
-/**
- * @brief IoTHub hostname.
- *
- */
-#define democonfigHOSTNAME     CONFIG_AZURE_IOT_HUB_FQDN
-
-/**
  * @brief Load the required certificates:
  *  - Baltimore Trusted Root CA
  *  - DigiCert Global Root G2
@@ -157,12 +138,12 @@
  * @brief Set the stack size of the main demo task.
  *
  */
-#define democonfigDEMO_STACKSIZE         CONFIG_AZURE_TASK_STACKSIZE
+#define democonfigDEMO_STACKSIZE         4096
 
 /**
  * @brief Size of the network buffer for MQTT packets.
  */
-#define democonfigNETWORK_BUFFER_SIZE    CONFIG_NETWORK_BUFFER_SIZE
+#define democonfigNETWORK_BUFFER_SIZE    5120
 
 /**
  * @brief IoTHub endpoint port.
