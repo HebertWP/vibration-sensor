@@ -40,6 +40,8 @@
 #include "device_configuration.h"
 #include <ArduinoJson.h>
 #include "QMI8658_setup.h"
+#include "iot_setup.h"
+
 
 /**
  * @brief The maximum number of retries for network operation with server.
@@ -558,10 +560,7 @@ static uint32_t prvConnectToServerWithBackoffRetries(const char *pcHostName,
 }
 /*-----------------------------------------------------------*/
 
-/*
- * @brief Create the task that demonstrates the AzureIoTHub demo
- */
-void vStartDemoTask(void)
+esp_err_t init_iot()
 {
     /* This example uses a single application task, which in turn is used to
      * connect, subscribe, publish, unsubscribe and disconnect from the IoT Hub */
@@ -571,5 +570,5 @@ void vStartDemoTask(void)
                 NULL,                     /* Task parameter - not used in this case. */
                 tskIDLE_PRIORITY,         /* Task priority, must be between 0 and configMAX_PRIORITIES - 1. */
                 NULL);                    /* Used to pass out a handle to the created task - not used in this case. */
+    return ESP_OK;
 }
-/*-----------------------------------------------------------*/

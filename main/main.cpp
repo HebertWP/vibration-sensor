@@ -1,5 +1,4 @@
 #include "esp_err.h"
-#include "nvs_flash.h"
 #include "esp_event.h"
 #include "esp_netif.h"
 
@@ -9,7 +8,7 @@
 #include "ble_setup.h"
 #include "wifi_setup.h"
 #include "QMI8658_setup.h"
-#include "sample_azure_iot_pnp.cpp"
+#include "iot_setup.h"
 
 extern "C" void app_main(void)
 {
@@ -24,5 +23,5 @@ extern "C" void app_main(void)
     Serial.begin(115200);
     setupQMI8658();
     ESP_ERROR_CHECK(init_wifi());
-    vStartDemoTask();
+    ESP_ERROR_CHECK(init_iot());
 }
