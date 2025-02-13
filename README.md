@@ -14,8 +14,8 @@ libraries.
 - ✅ Have BLE GATT server: To allow users configure network configuration in real time.
 - ✅ RF Coexistence: To have BLE and WiFi working together.
 - ✅ Send Telemetry data to Azure IoT Hub.
-- ❌ Receive Direct message from Azure IoT Hub.
-- ❌ Receive Twin update from Azure IoT Hub.
+- ✅ Receive Direct message from Azure IoT Hub.
+- ✅ Receive Twin update from Azure IoT Hub.
 - ❌ HTTPS OTA update.
 - ✅ Acellerometer read.
 - ✅ FFT processing for sensor data.
