@@ -20,29 +20,7 @@ extern "C" {
 #include "azure_iot_hub_client_properties.h"
 #include "demo_config.h"
 
-/**
- * @brief The payload to send to the Device Provisioning Service (DO NOT MODIFY)
- */
-#define sampleazureiotPROVISIONING_PAYLOAD    "{\"modelId\":\"" sampleazureiotMODEL_ID "\"}"
-
 extern AzureIoTHubClient_t xAzureIoTHubClient;
-
-/**
- * @brief Provides the payload to be sent as telemetry to the Azure IoT Hub.
- *
- * @remark This function must be implemented by the specific sample.
- *         `ulCreateTelemetry` is called periodically by the sample core task (the task created by `vStartDemoTask`).
- *         If `pulTelemetryDataLength` returned is zero, telemetry is not send to the Azure IoT Hub.
- *
- * @param[out]  pucTelemetryData        Pointer to uint8_t* that will contain the Telemetry payload.
- * @param[in]   ulTelemetryDataSize     Size of `pucTelemetryData`
- * @param[out]  pulTelemetryDataLength  The number of bytes written in `pucTelemetryData`
- *
- * @return uint32_t Zero if successful, non-zero if any failure occurs.
- */
-uint32_t ulCreateTelemetry( uint8_t * pucTelemetryData,
-                            uint32_t ulTelemetryDataSize,
-                            uint32_t * pulTelemetryDataLength );
 
 /**
  * @brief Provides the payload to be sent as reported properties update to the Azure IoT Hub.
