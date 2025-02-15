@@ -98,7 +98,7 @@ esp_err_t read_nvs(nvs_handle handle, uint8_t *array, const char *key)
     return ESP_OK;
 }
 
-esp_err_t write_nvs(const char *key, char *value, uint16_t  len)
+esp_err_t write_nvs(const char *key, char *value, uint16_t len)
 {
     value[len] = '\0';
     nvs_handle handle;
