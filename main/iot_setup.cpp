@@ -42,7 +42,6 @@
 #include "QMI8658_setup.h"
 #include "iot_setup.h"
 
-
 /**
  * @brief The maximum number of retries for network operation with server.
  */
@@ -129,33 +128,6 @@ static uint8_t ucCommandResponsePayloadBuffer[256];
 /* Reported Properties buffers */
 static uint8_t ucReportedPropertiesUpdate[380];
 static uint32_t ulReportedPropertiesUpdateLength;
-/*-----------------------------------------------------------*/
-
-/**
- * @brief The task used to demonstrate the Azure IoT Hub API.
- *
- * @param[in] pvParameters Parameters as passed at the time of task creation. Not
- * used in this example.
- */
-static void prvAzureDemoTask(void *pvParameters);
-
-/**
- * @brief Connect to endpoint with reconnection retries.
- *
- * If connection fails, retry is attempted after a timeout.
- * Timeout value will exponentially increase until maximum
- * timeout value is reached or the number of attempts are exhausted.
- *
- * @param pcHostName Hostname of the endpoint to connect to.
- * @param ulPort Endpoint port.
- * @param pxNetworkCredentials Pointer to Network credentials.
- * @param pxNetworkContext Point to Network context created.
- * @return uint32_t The status of the final connection attempt.
- */
-static uint32_t prvConnectToServerWithBackoffRetries(const char *pcHostName,
-                                                     uint32_t ulPort,
-                                                     NetworkCredentials_t *pxNetworkCredentials,
-                                                     NetworkContext_t *pxNetworkContext);
 /*-----------------------------------------------------------*/
 
 /**
@@ -340,6 +312,52 @@ uint32_t createReportedPropertiesUpdate(uint8_t *pucPropertiesData,
     return lBytesWritten;
 }
 
+static uint32_t prvConnectToServerWithBackoffRetries(const char *pcHostName,
+                                                     uint32_t port,
+                                                     NetworkCredentials_t *pxNetworkCredentials,
+                                                     NetworkContext_t *pxNetworkContext)
+{
+    TlsTransportStatus_t xNetworkStatus;
+    BackoffAlgorithmStatus_t xBackoffAlgStatus = BackoffAlgorithmSuccess;
+    BackoffAlgorithmContext_t xReconnectParams;
+    uint16_t usNextRetryBackOff = 0U;
+
+    /* Initialize reconnect attempts and interval. */
+    BackoffAlgorithm_InitializeParams(&xReconnectParams,
+                                      sampleazureiotRETRY_BACKOFF_BASE_MS,
+                                      sampleazureiotRETRY_MAX_BACKOFF_DELAY_MS,
+                                      sampleazureiotRETRY_MAX_ATTEMPTS);
+
+    do
+    {
+        LogInfo(("Creating a TLS connection to %s:%u.\r\n", pcHostName, (uint16_t)port));
+        xNetworkStatus = TLS_Socket_Connect(pxNetworkContext,
+                                            pcHostName, port,
+                                            pxNetworkCredentials,
+                                            sampleazureiotTRANSPORT_SEND_RECV_TIMEOUT_MS,
+                                            sampleazureiotTRANSPORT_SEND_RECV_TIMEOUT_MS);
+
+        if (xNetworkStatus != eTLSTransportSuccess)
+        {
+            xBackoffAlgStatus = BackoffAlgorithm_GetNextBackoff(&xReconnectParams, configRAND32(), &usNextRetryBackOff);
+
+            if (xBackoffAlgStatus == BackoffAlgorithmRetriesExhausted)
+            {
+                LogError(("Connection to the IoT Hub failed, all attempts exhausted."));
+            }
+            else if (xBackoffAlgStatus == BackoffAlgorithmSuccess)
+            {
+                LogWarn(("Connection to the IoT Hub failed [%d]. "
+                         "Retrying connection with backoff and jitter [%d]ms.",
+                         xNetworkStatus, usNextRetryBackOff));
+                vTaskDelay(pdMS_TO_TICKS(usNextRetryBackOff));
+            }
+        }
+    } while ((xNetworkStatus != eTLSTransportSuccess) && (xBackoffAlgStatus == BackoffAlgorithmSuccess));
+
+    return xNetworkStatus == eTLSTransportSuccess ? 0 : 1;
+}
+
 /**
  * @brief Azure IoT demo task that gets started in the platform specific project.
  *  In this demo task, middleware API's are used to connect to Azure IoT Hub and
@@ -499,66 +517,6 @@ static void prvAzureDemoTask(void *pvParameters)
         vTaskDelay(sampleazureiotDELAY_BETWEEN_DEMO_ITERATIONS_TICKS);
     }
 }
-
-/**
- * @brief Connect to server with backoff retries.
- */
-static uint32_t prvConnectToServerWithBackoffRetries(const char *pcHostName,
-                                                     uint32_t port,
-                                                     NetworkCredentials_t *pxNetworkCredentials,
-                                                     NetworkContext_t *pxNetworkContext)
-{
-    TlsTransportStatus_t xNetworkStatus;
-    BackoffAlgorithmStatus_t xBackoffAlgStatus = BackoffAlgorithmSuccess;
-    BackoffAlgorithmContext_t xReconnectParams;
-    uint16_t usNextRetryBackOff = 0U;
-
-    /* Initialize reconnect attempts and interval. */
-    BackoffAlgorithm_InitializeParams(&xReconnectParams,
-                                      sampleazureiotRETRY_BACKOFF_BASE_MS,
-                                      sampleazureiotRETRY_MAX_BACKOFF_DELAY_MS,
-                                      sampleazureiotRETRY_MAX_ATTEMPTS);
-
-    /* Attempt to connect to IoT Hub. If connection fails, retry after
-     * a timeout. Timeout value will exponentially increase till maximum
-     * attempts are reached.
-     */
-    do
-    {
-        LogInfo(("Creating a TLS connection to %s:%u.\r\n", pcHostName, (uint16_t)port));
-        /* Attempt to create a mutually authenticated TLS connection. */
-        xNetworkStatus = TLS_Socket_Connect(pxNetworkContext,
-                                            pcHostName, port,
-                                            pxNetworkCredentials,
-                                            sampleazureiotTRANSPORT_SEND_RECV_TIMEOUT_MS,
-                                            sampleazureiotTRANSPORT_SEND_RECV_TIMEOUT_MS);
-
-        if (xNetworkStatus != eTLSTransportSuccess)
-        {
-            /* Generate a random number and calculate backoff value (in milliseconds) for
-             * the next connection retry.
-             * Note: It is recommended to seed the random number generator with a device-specific
-             * entropy source so that possibility of multiple devices retrying failed network operations
-             * at similar intervals can be avoided. */
-            xBackoffAlgStatus = BackoffAlgorithm_GetNextBackoff(&xReconnectParams, configRAND32(), &usNextRetryBackOff);
-
-            if (xBackoffAlgStatus == BackoffAlgorithmRetriesExhausted)
-            {
-                LogError(("Connection to the IoT Hub failed, all attempts exhausted."));
-            }
-            else if (xBackoffAlgStatus == BackoffAlgorithmSuccess)
-            {
-                LogWarn(("Connection to the IoT Hub failed [%d]. "
-                         "Retrying connection with backoff and jitter [%d]ms.",
-                         xNetworkStatus, usNextRetryBackOff));
-                vTaskDelay(pdMS_TO_TICKS(usNextRetryBackOff));
-            }
-        }
-    } while ((xNetworkStatus != eTLSTransportSuccess) && (xBackoffAlgStatus == BackoffAlgorithmSuccess));
-
-    return xNetworkStatus == eTLSTransportSuccess ? 0 : 1;
-}
-/*-----------------------------------------------------------*/
 
 esp_err_t init_iot()
 {
