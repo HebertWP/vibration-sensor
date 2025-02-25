@@ -37,4 +37,5 @@ esp_err_t init_memory();
  */
 esp_err_t write_nvs(const char *key, char *value, uint16_t len);
 
+esp_err_t read_spiffs(const char *file_path, char **out, size_t *len);
 #endif

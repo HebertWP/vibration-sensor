@@ -139,3 +139,25 @@ esp_err_t init_memory()
     nvs_close(handle);
     return ESP_OK;
 }
+
+esp_err_t read_spiffs(const char *file_path, char **out, size_t *len)
+{
+    FILE *f = fopen(file_path, "r");
+    if (f == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to open file: %s", file_path);
+        return ESP_FAIL;
+    }
+    //get file length
+    fseek(f, 0, SEEK_END);
+    *len = ftell(f) + 1;
+    ESP_LOGI(TAG, "File length: %d", *len);
+    *out = (char *)malloc(*len);
+    
+    fseek(f, 0, SEEK_SET);
+    fread(*out, *len, 1, f);
+    (*out)[*len -1 ] = '\0';
+    
+    fclose(f);
+    return ESP_OK;
+}

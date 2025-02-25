@@ -12,7 +12,6 @@
 /* Azure Provisioning/IoT Hub library includes */
 #include "azure_iot_hub_client.h"
 #include "azure_iot_hub_client_properties.h"
-#include "azure_iot_provisioning_client.h"
 
 /* Azure JSON includes */
 #include "azure_iot_json_reader.h"
@@ -41,6 +40,7 @@
 #include <ArduinoJson.h>
 #include "QMI8658_setup.h"
 #include "iot_setup.h"
+#include "file_setup.h"
 
 /**
  * @brief The maximum number of retries for network operation with server.
@@ -108,8 +108,8 @@
 #define DOUBLE_DECIMAL_PLACE_DIGITS 2
 #define REBOOT_COMAND "reboot"
 
-char g_certificate[2048];
-char g_key[2048];
+char *g_certificate;
+char *g_key;
 
 /* Each compilation unit must define the NetworkContext struct. */
 struct NetworkContext
@@ -224,25 +224,6 @@ static void prvHandleProperties(AzureIoTHubClientPropertiesResponse_t *pxMessage
 }
 /*-----------------------------------------------------------*/
 
-esp_err_t loadCert(const char *file_path, char *out)
-{
-    FILE *f = fopen(file_path, "r");
-    char line[256];
-    int index = 0;
-    while (fgets(line, sizeof(line), f))
-    {
-        for (int i = 0; i < strlen(line); i++)
-        {
-            out[index++] = line[i];
-        }
-    }
-    // out[index++] = '\n';
-    out[index++] = '\0';
-    out[index] = '\0';
-    fclose(f);
-    return ESP_OK;
-}
-
 /**
  * @brief Setup transport credentials.
  */
@@ -253,12 +234,10 @@ static uint32_t prvSetupNetworkCredentials(NetworkCredentials_t *pxNetworkCreden
     pxNetworkCredentials->pucRootCa = (const unsigned char *)democonfigROOT_CA_PEM;
     pxNetworkCredentials->xRootCaSize = sizeof(democonfigROOT_CA_PEM);
 
-    loadCert("/spiffs/ca.pem", g_certificate);
-    loadCert("/spiffs/cert_key.key", g_key);
+    read_spiffs("/spiffs/ca.pem", &g_certificate, &(pxNetworkCredentials->xClientCertSize) );
+    read_spiffs("/spiffs/cert_key.key", &g_key, &(pxNetworkCredentials->xPrivateKeySize));
     pxNetworkCredentials->pucClientCert = (const unsigned char *)g_certificate;
-    pxNetworkCredentials->xClientCertSize = strlen(g_certificate) + 1;
     pxNetworkCredentials->pucPrivateKey = (const unsigned char *)g_key;
-    pxNetworkCredentials->xPrivateKeySize = strlen(g_key) + 1;
     return 0;
 }
 /*-----------------------------------------------------------*/
