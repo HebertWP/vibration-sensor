@@ -1,6 +1,8 @@
 #ifndef IOT_SETUP_H
 #define IOT_SETUP_H
 
-extern void setupIOT();
+#include "esp_err.h"
+
+esp_err_t init_iot();
 
 #endif // IOT_SETUP_H

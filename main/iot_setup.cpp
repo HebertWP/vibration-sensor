@@ -1,290 +1,493 @@
+/* Copyright (c) Microsoft Corporation.
+ * Licensed under the MIT License. */
+
+/* Standard includes. */
 #include <string.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-#include "esp_system.h"
-#include "esp_wifi.h"
-#include "esp_event.h"
-#include "esp_log.h"
-#include "nvs_flash.h"
+#include <stdio.h>
 
-#include "lwip/err.h"
-#include "lwip/sys.h"
+/* Kernel includes. */
+#include "FreeRTOS.h"
+#include "task.h"
 
+/* Azure Provisioning/IoT Hub library includes */
+#include "azure_iot_hub_client.h"
+#include "azure_iot_hub_client_properties.h"
 
-#include "iot_setup.h"
-// C99 libraries
-#include <cstdlib>
-#include <string.h>
-#include <time.h>
+/* Azure JSON includes */
+#include "azure_iot_json_reader.h"
+#include "azure_iot_json_writer.h"
 
-// Libraries for MQTT client and WiFi connection
-#include <WiFi.h>
-#include <mqtt_client.h>
+/* Exponential backoff retry include. */
+#include "backoff_algorithm.h"
 
-// Azure IoT SDK for C includes
-#include <az_core.h>
-#include <az_iot.h>
-#include <azure_ca.h>
+/* Transport interface implementation include header for TLS. */
+#include "transport_tls_socket.h"
 
-// Additional sample headers
-#include "DEV_config.h"
-#include "QMI8658_setup.h"
+/* Crypto helper header. */
+#include "azure_sample_crypto.h"
+
+/* Demo Specific configs. */
+#include "demo_config.h"
+
+/* Demo Specific Interface Functions. */
+#include "azure_sample_connection.h"
+
+/* Data Interface Definition */
+#include "sample_azure_iot_pnp_data_if.h"
+
+#include "wifi_setup.h"
+#include "device_configuration.h"
 #include <ArduinoJson.h>
+#include "QMI8658_setup.h"
+#include "iot_setup.h"
+#include "file_setup.h"
 
-// When developing for your own Arduino-based platform,
-// please follow the format '(ard;<platform>)'.
-#define AZURE_SDK_CLIENT_USER_AGENT "c%2F" AZ_SDK_VERSION_STRING "(ard;esp32)"
+/**
+ * @brief The maximum number of retries for network operation with server.
+ */
+#define sampleazureiotRETRY_MAX_ATTEMPTS (5U)
 
-// Utility macros and defines
-#define sizeofarray(a) (sizeof(a) / sizeof(a[0]))
-#define NTP_SERVERS "pool.ntp.org", "time.nist.gov"
-#define MQTT_QOS1 1
-#define DO_NOT_RETAIN_MSG 0
-#define SAS_TOKEN_DURATION_IN_MINUTES 60
-#define UNIX_TIME_NOV_13_2017 1510592825
+/**
+ * @brief The maximum back-off delay (in milliseconds) for retrying failed operation
+ *  with server.
+ */
+#define sampleazureiotRETRY_MAX_BACKOFF_DELAY_MS (5000U)
 
-#define PST_TIME_ZONE -8
-#define PST_TIME_ZONE_DAYLIGHT_SAVINGS_DIFF 1
+/**
+ * @brief The base back-off delay (in milliseconds) to use for network operation retry
+ * attempts.
+ */
+#define sampleazureiotRETRY_BACKOFF_BASE_MS (500U)
 
-#define GMT_OFFSET_SECS (PST_TIME_ZONE * 3600)
-#define GMT_OFFSET_SECS_DST ((PST_TIME_ZONE + PST_TIME_ZONE_DAYLIGHT_SAVINGS_DIFF) * 3600)
+/**
+ * @brief Timeout for receiving CONNACK packet in milliseconds.
+ */
+#define sampleazureiotCONNACK_RECV_TIMEOUT_MS (10 * 1000U)
 
-// Translate iot_configs.h defines into variables used by the sample
-char certificate[2048];
-char key[2048];
-static const int mqtt_port = AZ_IOT_DEFAULT_MQTT_CONNECT_PORT;
+/**
+ * @brief Date-time to use for the model id
+ */
+#define sampleazureiotDATE_TIME_FORMAT "%Y-%m-%dT%H:%M:%S.000Z"
 
-// Memory allocated for the sample's variables and structures.
-static esp_mqtt_client_handle_t mqtt_client;
-static az_iot_hub_client client;
+/**
+ * @brief Time in ticks to wait between each cycle of the demo implemented
+ * by prvMQTTDemoTask().
+ */
+#define sampleazureiotDELAY_BETWEEN_DEMO_ITERATIONS_TICKS (pdMS_TO_TICKS(5000U))
 
-static char mqtt_client_id[128];
-static char mqtt_username[128];
-static char mqtt_password[200];
-static uint8_t sas_signature_buffer[256];
-static char telemetry_topic[128];
-static uint32_t telemetry_send_count = 0;
-static String telemetry_payload = "{}";
+/**
+ * @brief Timeout for MQTT_ProcessLoop in milliseconds.
+ */
+#define sampleazureiotPROCESS_LOOP_TIMEOUT_MS (500U)
 
-#define INCOMING_DATA_BUFFER_SIZE 128
-static char incoming_data[INCOMING_DATA_BUFFER_SIZE];
+/**
+ * @brief Delay (in ticks) between consecutive cycles of MQTT publish operations in a
+ * demo iteration.
+ *
+ * Note that the process loop also has a timeout, so the total time between
+ * publishes is the sum of the two delays.
+ */
+#define sampleazureiotDELAY_BETWEEN_PUBLISHES_TICKS (pdMS_TO_TICKS(2000U))
 
+/**
+ * @brief Transport timeout in milliseconds for transport send and receive.
+ */
+#define sampleazureiotTRANSPORT_SEND_RECV_TIMEOUT_MS (2000U)
 
-static void connectToWiFi()
+/**
+ * @brief Transport timeout in milliseconds for transport send and receive.
+ */
+#define sampleazureiotProvisioning_Registration_TIMEOUT_MS (3 * 1000U)
+
+/**
+ * @brief Wait timeout for subscribe to finish.
+ */
+#define sampleazureiotSUBSCRIBE_TIMEOUT (10 * 1000U)
+/*-----------------------------------------------------------*/
+
+#define DOUBLE_DECIMAL_PLACE_DIGITS 2
+#define REBOOT_COMAND "reboot"
+
+char *g_certificate;
+char *g_key;
+
+/* Each compilation unit must define the NetworkContext struct. */
+struct NetworkContext
 {
-    ESP_LOGI("Wifi", "Connecting to WiFi");
+    void *pParams;
+};
 
-    WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
-    delay(100);
-    WiFi.begin(ssid, password);
-    WiFi.setAutoReconnect(true);
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        delay(500);
-    }
-    ESP_LOGI("Wifi", "Connected to WiFi");
-}
+AzureIoTHubClient_t xAzureIoTHubClient;
 
-static void initializeTime()
+/* Telemetry buffers */
+static uint8_t ucScratchBuffer[4098];
+
+/* Command buffers */
+static uint8_t ucCommandResponsePayloadBuffer[256];
+
+/* Reported Properties buffers */
+static uint8_t ucReportedPropertiesUpdate[380];
+static uint32_t ulReportedPropertiesUpdateLength;
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief Static buffer used to hold MQTT messages being sent and received.
+ */
+static uint8_t ucMQTTMessageBuffer[democonfigNETWORK_BUFFER_SIZE];
+
+/**
+ * @brief Internal function for handling Command requests.
+ *
+ * @remark This function is required for the interface with samples to work properly.
+ */
+static void prvHandleCommand(AzureIoTHubClientCommandRequest_t *pxMessage,
+                             void *pvContext)
 {
-    ESP_LOGI("Time", "Initializing time");
-    configTime(GMT_OFFSET_SECS, GMT_OFFSET_SECS_DST, NTP_SERVERS);
-    time_t now = time(NULL);
-    while (now < UNIX_TIME_NOV_13_2017)
+    AzureIoTHubClient_t *pxHandle = (AzureIoTHubClient_t *)pvContext;
+    uint32_t ulResponseStatus = 0;
+    AzureIoTResult_t xResult;
+    ESP_LOGI("Command", "Comand name: %s", (const char *)pxMessage->pucCommandName);
+    if (strncmp((const char *)pxMessage->pucCommandName, REBOOT_COMAND, strlen(REBOOT_COMAND)) == 0)
     {
-        delay(500);
-        now = time(nullptr);
-    }
-    ESP_LOGI("Time", "Time initialized");
-}
-
-static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
-{
-    (void)handler_args;
-    (void)base;
-    (void)event_id;
-
-    esp_mqtt_event_handle_t event = (esp_mqtt_event_handle_t)event_data;
-    switch (event->event_id)
-    {
-        int i, r;
-    case MQTT_EVENT_CONNECTED:
-        r = esp_mqtt_client_subscribe(mqtt_client, AZ_IOT_HUB_CLIENT_C2D_SUBSCRIBE_TOPIC, 1);
-        break;
-    case MQTT_EVENT_DATA:
-        
-        for (i = 0; i < (INCOMING_DATA_BUFFER_SIZE - 1) && i < event->topic_len; i++)
+        ESP_LOGI("Command", "Rebooting");
+        if ((xResult = AzureIoTHubClient_SendCommandResponse(pxHandle, pxMessage, ulResponseStatus,
+                                                             ucCommandResponsePayloadBuffer,
+                                                             0)) != eAzureIoTSuccess)
         {
-            incoming_data[i] = event->topic[i];
+            LogError(("Error sending command response: result 0x%08x", (uint16_t)xResult));
         }
-        incoming_data[i] = '\0';
-
-        for (i = 0; i < (INCOMING_DATA_BUFFER_SIZE - 1) && i < event->data_len; i++)
+        else
         {
-            incoming_data[i] = event->data[i];
+            LogInfo(("Successfully sent command response %d", (int16_t)ulResponseStatus));
         }
-        incoming_data[i] = '\0';
-
-        break;
-    default:
-        break;
-    }
-}
- 
-static void initializeIoTHubClient()
-{
-    const char *host = (const char*)(*deviceDocument)["host"];
-    const char *device_id = (const char*)(*deviceDocument)["device_id"];
-    az_iot_hub_client_options options = az_iot_hub_client_options_default();
-    options.user_agent = AZ_SPAN_FROM_STR(AZURE_SDK_CLIENT_USER_AGENT);
-
-    if (az_result_failed(az_iot_hub_client_init(
-            &client,
-            az_span_create((uint8_t *)host, strlen(host)),
-            az_span_create((uint8_t *)device_id, strlen(device_id)),
-            &options)))
-    {
-        ESP_LOGI("IoT Hub Client", "Failed to initialize IoT Hub client");
-        return;
-    }
-
-    size_t client_id_length;
-    if (az_result_failed(az_iot_hub_client_get_client_id(
-            &client, mqtt_client_id, sizeof(mqtt_client_id) - 1, &client_id_length)))
-    {
-        return;
-    }
-
-    if (az_result_failed(az_iot_hub_client_get_user_name(
-            &client, mqtt_username, sizeofarray(mqtt_username), NULL)))
-    {
-        return;
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        esp_restart();
     }
 }
 
-static int initializeMqttClient()
+static void prvDispatchPropertiesUpdate(AzureIoTHubClientPropertiesResponse_t *pxMessage)
 {
-    esp_mqtt_client_config_t mqtt_config;
-    memset(&mqtt_config, 0, sizeof(mqtt_config));
+    vHandleWritableProperties(pxMessage,
+                              ucReportedPropertiesUpdate,
+                              sizeof(ucReportedPropertiesUpdate),
+                              &ulReportedPropertiesUpdateLength);
 
-    std::string uri = std::string("mqtts://") + (const char *)(*deviceDocument)["host"];
-    mqtt_config.broker.address.uri = uri.c_str();
-    mqtt_config.broker.address.port = mqtt_port;
-    mqtt_config.credentials.client_id = mqtt_client_id;
-    mqtt_config.credentials.username = mqtt_username;
-
-    FILE* f = fopen("/spiffs/ca.pem", "r");
-    char line[256];
-    int index = 0;
-    while(fgets(line, sizeof(line), f))
+    if (ulReportedPropertiesUpdateLength == 0)
     {
-        for(int i = 0; i < strlen(line); i++)
-        {
-            certificate[index++] = line[i];
-        }
-    }
-    certificate[index -1] = '\0';
-    fclose(f);
-    mqtt_config.credentials.authentication.certificate = certificate;
-    mqtt_config.credentials.authentication.certificate_len = index;
-    
-    f = fopen("/spiffs/cert_key.key", "r");
-    index = 0;
-    while(fgets(line, sizeof(line), f))
-    {
-        for(int i = 0; i < strlen(line); i++)
-        {
-            key[index++] = line[i];
-        }
-    }
-    key[index -1] = '\0';
-
-    mqtt_config.credentials.authentication.key = key;
-    mqtt_config.credentials.authentication.key_len = index;
-
-    mqtt_config.session.keepalive = 30;
-    mqtt_config.session.disable_clean_session = 0;
-    mqtt_config.network.disable_auto_reconnect = false;
-    mqtt_config.broker.verification.certificate = (const char *)ca_pem;
-    mqtt_config.broker.verification.certificate_len = (size_t)ca_pem_len;
-
-    mqtt_client = esp_mqtt_client_init(&mqtt_config);
-
-    if (mqtt_client == NULL)
-    {
-        ESP_LOGI("MQTT", "Failed to initialize MQTT client");
-        return 1;
-    }
-
-    esp_mqtt_client_register_event(mqtt_client, MQTT_EVENT_ANY, mqtt_event_handler, NULL);
-
-    esp_err_t start_result = esp_mqtt_client_start(mqtt_client);
-
-    if (start_result != ESP_OK)
-    {
-        return 1;
+        LogError(("Failed to send response to writable properties update, length of response is zero."));
     }
     else
     {
-        return 0;
+        AzureIoTResult_t xResult = AzureIoTHubClient_SendPropertiesReported(&xAzureIoTHubClient,
+                                                                            ucReportedPropertiesUpdate,
+                                                                            ulReportedPropertiesUpdateLength,
+                                                                            NULL);
+        configASSERT(xResult == eAzureIoTSuccess);
     }
 }
+/*-----------------------------------------------------------*/
 
-static uint32_t getEpochTimeInSecs() { return (uint32_t)time(NULL); }
-
-static void generateTelemetryPayload()
+/**
+ * @brief Private property message callback handler.
+ *        This handler dispatches the calls to the functions defined in
+ *        sample_azure_iot_pnp_data_if.h
+ */
+static void prvHandleProperties(AzureIoTHubClientPropertiesResponse_t *pxMessage,
+                                void *pvContext)
 {
-    ESP_LOGI("Telemetry", "BEFORE xSemaphoreTake");
+    (void)pvContext;
+
+    ESP_LOGI("Properties", "Property document payload : %.*s \r\n",
+             (int16_t)pxMessage->ulPayloadLength,
+             (const char *)pxMessage->pvMessagePayload);
+
+    switch (pxMessage->xMessageType)
+    {
+    case eAzureIoTHubPropertiesRequestedMessage:
+        LogDebug(("Device property document GET received"));
+        prvDispatchPropertiesUpdate(pxMessage);
+        break;
+
+    case eAzureIoTHubPropertiesWritablePropertyMessage:
+        LogDebug(("Device writeable property received"));
+        prvDispatchPropertiesUpdate(pxMessage);
+        break;
+
+    case eAzureIoTHubPropertiesReportedResponseMessage:
+        LogDebug(("Device reported property response received"));
+        break;
+
+    default:
+        LogError(("Unknown property message: 0x%08x", pxMessage->xMessageType));
+        configASSERT(false);
+    }
+}
+/*-----------------------------------------------------------*/
+
+/**
+ * @brief Setup transport credentials.
+ */
+static uint32_t prvSetupNetworkCredentials(NetworkCredentials_t *pxNetworkCredentials)
+{
+    pxNetworkCredentials->xDisableSni = pdFALSE;
+    /* Set the credentials for establishing a TLS connection. */
+    pxNetworkCredentials->pucRootCa = (const unsigned char *)democonfigROOT_CA_PEM;
+    pxNetworkCredentials->xRootCaSize = sizeof(democonfigROOT_CA_PEM);
+
+    read_spiffs("/spiffs/ca.pem", &g_certificate, &(pxNetworkCredentials->xClientCertSize) );
+    read_spiffs("/spiffs/cert_key.key", &g_key, &(pxNetworkCredentials->xPrivateKeySize));
+    pxNetworkCredentials->pucClientCert = (const unsigned char *)g_certificate;
+    pxNetworkCredentials->pucPrivateKey = (const unsigned char *)g_key;
+    return 0;
+}
+/*-----------------------------------------------------------*/
+
+uint32_t generateTelemetryPayload(
+    uint8_t *pucTelemetryData,
+    uint32_t ulTelemetryDataSize,
+    uint32_t *ulTelemetryDataLength)
+{
     xSemaphoreTake(canRead, portMAX_DELAY);
-    ESP_LOGI("Telemetry", "AFTER xSemaphoreTake");
     JsonDocument doc;
     for (int i = 0; i < 128; i++)
     {
-        doc["data"][i] = reads[i];
+        doc["FFT"][i] = reads[i];
     }
-
-    doc["timestamp"] = getEpochTimeInSecs();
-    serializeJson(doc, telemetry_payload);
     xSemaphoreGive(canRead);
+    *ulTelemetryDataLength = serializeJson(doc, (char *)pucTelemetryData, ulTelemetryDataSize);
+    return ESP_OK;
 }
 
-static void sendTelemetry()
+/**
+ * @brief Implements the sample interface for generating reported properties payload.
+ */
+uint32_t createReportedPropertiesUpdate(uint8_t *pucPropertiesData,
+                                        uint32_t ulPropertiesDataSize)
 {
-    if (az_result_failed(az_iot_hub_client_telemetry_get_publish_topic(
-            &client, NULL, telemetry_topic, sizeof(telemetry_topic), NULL)))
+    AzureIoTResult_t xResult;
+    AzureIoTJSONWriter_t xWriter;
+    int32_t lBytesWritten;
+
+    /* Initialize the JSON writer with the buffer to which we will write the payload with the new temperature. */
+    xResult = AzureIoTJSONWriter_Init(&xWriter, pucPropertiesData, ulPropertiesDataSize);
+    configASSERT(xResult == eAzureIoTSuccess);
+
+    xResult = AzureIoTJSONWriter_AppendBeginObject(&xWriter);
+    configASSERT(xResult == eAzureIoTSuccess);
+
+    xResult = AzureIoTJSONWriter_AppendPropertyName(&xWriter, (const uint8_t *)"samplingFrequency",
+                                                    sizeof("samplingFrequency") - 1);
+    configASSERT(xResult == eAzureIoTSuccess);
+
+    xResult = AzureIoTJSONWriter_AppendDouble(&xWriter, 1000, DOUBLE_DECIMAL_PLACE_DIGITS);
+    configASSERT(xResult == eAzureIoTSuccess);
+
+    xResult = AzureIoTJSONWriter_AppendEndObject(&xWriter);
+    configASSERT(xResult == eAzureIoTSuccess);
+
+    lBytesWritten = AzureIoTJSONWriter_GetBytesUsed(&xWriter);
+    configASSERT(lBytesWritten > 0);
+
+    return lBytesWritten;
+}
+
+static uint32_t prvConnectToServerWithBackoffRetries(const char *pcHostName,
+                                                     uint32_t port,
+                                                     NetworkCredentials_t *pxNetworkCredentials,
+                                                     NetworkContext_t *pxNetworkContext)
+{
+    TlsTransportStatus_t xNetworkStatus;
+    BackoffAlgorithmStatus_t xBackoffAlgStatus = BackoffAlgorithmSuccess;
+    BackoffAlgorithmContext_t xReconnectParams;
+    uint16_t usNextRetryBackOff = 0U;
+
+    /* Initialize reconnect attempts and interval. */
+    BackoffAlgorithm_InitializeParams(&xReconnectParams,
+                                      sampleazureiotRETRY_BACKOFF_BASE_MS,
+                                      sampleazureiotRETRY_MAX_BACKOFF_DELAY_MS,
+                                      sampleazureiotRETRY_MAX_ATTEMPTS);
+
+    do
     {
-        return;
-    }
-    ESP_LOGI("Telemetry", "Sending telemetry message");
-    generateTelemetryPayload();
-    
-    ESP_LOGI("Telemetry", "Telemetry payload: %s", telemetry_payload.c_str());
-    esp_mqtt_client_publish(
-            mqtt_client,
-            telemetry_topic,
-            (const char *)telemetry_payload.c_str(),
-            telemetry_payload.length(),
-            MQTT_QOS1,
-            DO_NOT_RETAIN_MSG);
+        LogInfo(("Creating a TLS connection to %s:%u.\r\n", pcHostName, (uint16_t)port));
+        xNetworkStatus = TLS_Socket_Connect(pxNetworkContext,
+                                            pcHostName, port,
+                                            pxNetworkCredentials,
+                                            sampleazureiotTRANSPORT_SEND_RECV_TIMEOUT_MS,
+                                            sampleazureiotTRANSPORT_SEND_RECV_TIMEOUT_MS);
+
+        if (xNetworkStatus != eTLSTransportSuccess)
+        {
+            xBackoffAlgStatus = BackoffAlgorithm_GetNextBackoff(&xReconnectParams, configRAND32(), &usNextRetryBackOff);
+
+            if (xBackoffAlgStatus == BackoffAlgorithmRetriesExhausted)
+            {
+                LogError(("Connection to the IoT Hub failed, all attempts exhausted."));
+            }
+            else if (xBackoffAlgStatus == BackoffAlgorithmSuccess)
+            {
+                LogWarn(("Connection to the IoT Hub failed [%d]. "
+                         "Retrying connection with backoff and jitter [%d]ms.",
+                         xNetworkStatus, usNextRetryBackOff));
+                vTaskDelay(pdMS_TO_TICKS(usNextRetryBackOff));
+            }
+        }
+    } while ((xNetworkStatus != eTLSTransportSuccess) && (xBackoffAlgStatus == BackoffAlgorithmSuccess));
+
+    return xNetworkStatus == eTLSTransportSuccess ? 0 : 1;
 }
 
-void vTaskSendTelemetry(void *pvParameters)
+/**
+ * @brief Azure IoT demo task that gets started in the platform specific project.
+ *  In this demo task, middleware API's are used to connect to Azure IoT Hub and
+ *  function to adhere to the Plug and Play device convention.
+ */
+static void prvAzureDemoTask(void *pvParameters)
 {
+    uint32_t ulScratchBufferLength = 0U;
+    NetworkCredentials_t xNetworkCredentials = {0};
+    AzureIoTTransportInterface_t xTransport;
+    NetworkContext_t xNetworkContext = {0};
+    TlsTransportParams_t xTlsTransportParams = {0};
+    AzureIoTResult_t xResult;
+    uint32_t ulStatus;
+    AzureIoTHubClientOptions_t xHubOptions = {0};
+    bool xSessionPresent;
+
+    const char *device_name = (const char *)(*g_device_document)["device_id"];
+    const char *host = (const char *)(*g_device_document)["host"];
+
+    uint8_t *pucIotHubHostname = (uint8_t *)host;
+    uint8_t *pucIotHubDeviceId = (uint8_t *)device_name;
+    uint32_t pulIothubHostnameLength = strlen(host);
+    uint32_t pulIothubDeviceIdLength = strlen(device_name);
+
+    (void)pvParameters;
+
+    /* Initialize Azure IoT Middleware.  */
+    configASSERT(AzureIoT_Init() == eAzureIoTSuccess);
+
+    ulStatus = prvSetupNetworkCredentials(&xNetworkCredentials);
+    configASSERT(ulStatus == 0);
+
+    xNetworkContext.pParams = &xTlsTransportParams;
+
     while (true)
     {
-        sendTelemetry();
-        ESP_LOGI("Telemetry", "Telemetry sent");
-        delay(45000);
+        // 1. Internet connection
+        if (xAzureSample_IsConnectedToInternet())
+        {
+            // 2. Stablish TLS connection
+            ulStatus = prvConnectToServerWithBackoffRetries((const char *)pucIotHubHostname,
+                                                            democonfigIOTHUB_PORT,
+                                                            &xNetworkCredentials, &xNetworkContext);
+            configASSERT(ulStatus == eAzureIoTSuccess);
+
+            /* Fill in Transport Interface send and receive function pointers. */
+            xTransport.pxNetworkContext = &xNetworkContext;
+            xTransport.xSend = TLS_Socket_Send;
+            xTransport.xRecv = TLS_Socket_Recv;
+
+            /* Init IoT Hub option */
+            xResult = AzureIoTHubClient_OptionsInit(&xHubOptions);
+            configASSERT(xResult == eAzureIoTSuccess);
+
+            xHubOptions.ulModuleIDLength = 0;
+            xHubOptions.pucModelID = (const uint8_t *)sampleazureiotMODEL_ID;
+            xHubOptions.ulModelIDLength = sizeof(sampleazureiotMODEL_ID) - 1;
+
+            xResult = AzureIoTHubClient_Init(&xAzureIoTHubClient,
+                                             pucIotHubHostname, pulIothubHostnameLength,
+                                             pucIotHubDeviceId, pulIothubDeviceIdLength,
+                                             &xHubOptions,
+                                             ucMQTTMessageBuffer, sizeof(ucMQTTMessageBuffer),
+                                             ullGetUnixTime,
+                                             &xTransport);
+            configASSERT(xResult == eAzureIoTSuccess);
+
+            LogInfo(("Creating an MQTT connection to %s.\r\n", pucIotHubHostname));
+
+            xResult = AzureIoTHubClient_Connect(&xAzureIoTHubClient,
+                                                false, &xSessionPresent,
+                                                sampleazureiotCONNACK_RECV_TIMEOUT_MS);
+            configASSERT(xResult == eAzureIoTSuccess);
+
+            xResult = AzureIoTHubClient_SubscribeCommand(&xAzureIoTHubClient, prvHandleCommand,
+                                                         &xAzureIoTHubClient, sampleazureiotSUBSCRIBE_TIMEOUT);
+            configASSERT(xResult == eAzureIoTSuccess);
+
+            xResult = AzureIoTHubClient_SubscribeProperties(&xAzureIoTHubClient, prvHandleProperties,
+                                                            &xAzureIoTHubClient, sampleazureiotSUBSCRIBE_TIMEOUT);
+            configASSERT(xResult == eAzureIoTSuccess);
+
+            /* Get property document after initial connection */
+            xResult = AzureIoTHubClient_RequestPropertiesAsync(&xAzureIoTHubClient);
+            configASSERT(xResult == eAzureIoTSuccess);
+
+            /* Publish messages with QoS1, send and process Keep alive messages. */
+            for (; xAzureSample_IsConnectedToInternet();)
+            {
+                /* Hook for sending Telemetry */
+                if ((generateTelemetryPayload(ucScratchBuffer, sizeof(ucScratchBuffer), &ulScratchBufferLength) == ESP_OK) &&
+                    (ulScratchBufferLength > 0))
+                {
+                    ESP_LOGI("Telemetry", "%s, length: %d", ucScratchBuffer, (int)ulScratchBufferLength);
+                    xResult = AzureIoTHubClient_SendTelemetry(&xAzureIoTHubClient,
+                                                              ucScratchBuffer, ulScratchBufferLength,
+                                                              NULL, eAzureIoTHubMessageQoS1, NULL);
+                    configASSERT(xResult == eAzureIoTSuccess);
+                }
+                else
+                {
+                    ESP_LOGE("Telemetry", "Failed to generate telemetry data or length is zero. %d", (int)ulScratchBufferLength);
+                }
+
+                /* Hook for sending update to reported properties */
+                ulReportedPropertiesUpdateLength = createReportedPropertiesUpdate(ucReportedPropertiesUpdate, sizeof(ucReportedPropertiesUpdate));
+
+                if (ulReportedPropertiesUpdateLength > 0)
+                {
+                    xResult = AzureIoTHubClient_SendPropertiesReported(&xAzureIoTHubClient, ucReportedPropertiesUpdate, ulReportedPropertiesUpdateLength, NULL);
+                    configASSERT(xResult == eAzureIoTSuccess);
+                }
+
+                for (int i = 0; i < 30; i++)
+                {
+                    LogInfo(("Attempt to receive publish message from IoT Hub.\r\n"));
+                    xResult = AzureIoTHubClient_ProcessLoop(&xAzureIoTHubClient,
+                                                            sampleazureiotPROCESS_LOOP_TIMEOUT_MS);
+                    configASSERT(xResult == eAzureIoTSuccess);
+                    vTaskDelay(sampleazureiotDELAY_BETWEEN_PUBLISHES_TICKS);
+                }
+            }
+
+            /* Close the network connection.  */
+            TLS_Socket_Disconnect(&xNetworkContext);
+
+            /* Wait for some time between two iterations to ensure that we do not
+             * bombard the IoT Hub. */
+            LogInfo(("Demo completed successfully.\r\n"));
+        }
+
+        LogInfo(("Short delay before starting the next iteration.... \r\n\r\n"));
+        vTaskDelay(sampleazureiotDELAY_BETWEEN_DEMO_ITERATIONS_TICKS);
     }
 }
 
-extern void setupIOT()
+esp_err_t init_iot()
 {
-    connectToWiFi();
-    initializeTime();
-    initializeIoTHubClient();
-    initializeMqttClient();
-    xTaskCreate(vTaskSendTelemetry, "SendTelemetry", 20024, NULL, 1, NULL);
+    /* This example uses a single application task, which in turn is used to
+     * connect, subscribe, publish, unsubscribe and disconnect from the IoT Hub */
+    BaseType_t ret = xTaskCreate(prvAzureDemoTask,         /* Function that implements the task. */
+                "AzureDemoTask",          /* Text name for the task - only used for debugging. */
+                democonfigDEMO_STACKSIZE, /* Size of stack (in words, not bytes) to allocate for the task. */
+                NULL,                     /* Task parameter - not used in this case. */
+                tskIDLE_PRIORITY,         /* Task priority, must be between 0 and configMAX_PRIORITIES - 1. */
+                NULL);                    /* Used to pass out a handle to the created task - not used in this case. */
+    if (ret != pdPASS)
+    {
+        ESP_LOGE("Azure", "Failed to create AzureDemoTask");
+        return ESP_FAIL;
+    }
+    return ESP_OK;
 }

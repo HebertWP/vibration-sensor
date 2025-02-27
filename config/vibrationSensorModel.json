@@ -1,0 +1,31 @@
+{
+      "@context": "dtmi:dtdl:context;2",
+      "@id": "dtmi:com:example:VibrationSensor;1",
+      "@type": "Interface",
+      "displayName": "Vibration Sensor",
+      "contents": [
+            {
+                  "@type": "Telemetry",
+                  "name": "FFT",
+                  "schema": {
+                        "@type": "Array",
+                        "elementSchema": "double"
+                  }
+            },
+            {
+                  "@type": "Property",
+                  "name": "samplingFrequency",
+                  "displayName": "Sampling Frequency",
+                  "description": "The frequency at which the sensor samples data",
+                  "schema": "double",
+                  "writable": false,
+                  "unit": "Hz"
+            },
+            {
+                  "@type": "Command",
+                  "name": "reboot",
+                  "displayName": "Reboot",
+                  "description": "Reboot the device after 1 second"
+            }
+      ]
+}
