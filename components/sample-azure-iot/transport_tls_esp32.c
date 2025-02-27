@@ -41,11 +41,6 @@
 
 #include "demo_config.h"
 
-/* For using the ATECC608 secure element if support is configured */
-#ifdef democonfigUSE_HSM
-    #include "cryptoauthlib.h"
-#endif
-
 static const char *TAG = "tls_freertos";
 
 /**
