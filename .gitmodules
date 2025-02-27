@@ -4,9 +4,6 @@
 [submodule "components/arduinoFFT"]
 	path = components/arduinoFFT
 	url = https://github.com/kosme/arduinoFFT.git
-[submodule "components/azure-sdk-for-c-arduino"]
-	path = components/azure-sdk-for-c-arduino
-	url = https://github.com/HebertWP/azure-sdk-for-c-arduino.git
 [submodule "components/ArduinoJson"]
 	path = components/ArduinoJson
 	url = https://github.com/bblanchon/ArduinoJson.git
