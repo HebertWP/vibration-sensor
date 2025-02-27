@@ -405,8 +405,6 @@ static void prvAzureDemoTask(void *pvParameters)
                                              &xTransport);
             configASSERT(xResult == eAzureIoTSuccess);
 
-            /* Sends an MQTT Connect packet over the already established TLS connection,
-             * and waits for connection acknowledgment (CONNACK) packet. */
             LogInfo(("Creating an MQTT connection to %s.\r\n", pucIotHubHostname));
 
             xResult = AzureIoTHubClient_Connect(&xAzureIoTHubClient,
@@ -461,22 +459,6 @@ static void prvAzureDemoTask(void *pvParameters)
                     configASSERT(xResult == eAzureIoTSuccess);
                     vTaskDelay(sampleazureiotDELAY_BETWEEN_PUBLISHES_TICKS);
                 }
-            }
-
-            if (xAzureSample_IsConnectedToInternet())
-            {
-                xResult = AzureIoTHubClient_UnsubscribeProperties(&xAzureIoTHubClient);
-                configASSERT(xResult == eAzureIoTSuccess);
-
-                xResult = AzureIoTHubClient_UnsubscribeCommand(&xAzureIoTHubClient);
-                configASSERT(xResult == eAzureIoTSuccess);
-
-                /* Send an MQTT Disconnect packet over the already connected TLS over
-                 * TCP connection. There is no corresponding response for the disconnect
-                 * packet. After sending disconnect, client must close the network
-                 * connection. */
-                xResult = AzureIoTHubClient_Disconnect(&xAzureIoTHubClient);
-                configASSERT(xResult == eAzureIoTSuccess);
             }
 
             /* Close the network connection.  */
