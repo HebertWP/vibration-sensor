@@ -197,9 +197,9 @@ static void prvHandleProperties(AzureIoTHubClientPropertiesResponse_t *pxMessage
 {
     (void)pvContext;
 
-    LogDebug(("Property document payload : %.*s \r\n",
-              (int16_t)pxMessage->ulPayloadLength,
-              (const char *)pxMessage->pvMessagePayload));
+    ESP_LOGI("Properties", "Property document payload : %.*s \r\n",
+             (int16_t)pxMessage->ulPayloadLength,
+             (const char *)pxMessage->pvMessagePayload);
 
     switch (pxMessage->xMessageType)
     {
@@ -372,20 +372,16 @@ static void prvAzureDemoTask(void *pvParameters)
 
     xNetworkContext.pParams = &xTlsTransportParams;
 
-    for (;;)
+    while (true)
     {
+        // 1. Internet connection
         if (xAzureSample_IsConnectedToInternet())
         {
-            /* Attempt to establish TLS session with IoT Hub. If connection fails,
-             * retry after a timeout. Timeout value will be exponentially increased
-             * until  the maximum number of attempts are reached or the maximum timeout
-             * value is reached. The function returns a failure status if the TCP
-             * connection cannot be established to the IoT Hub after the configured
-             * number of attempts. */
+            // 2. Stablish TLS connection
             ulStatus = prvConnectToServerWithBackoffRetries((const char *)pucIotHubHostname,
                                                             democonfigIOTHUB_PORT,
                                                             &xNetworkCredentials, &xNetworkContext);
-            configASSERT(ulStatus == 0);
+            configASSERT(ulStatus == eAzureIoTSuccess);
 
             /* Fill in Transport Interface send and receive function pointers. */
             xTransport.pxNetworkContext = &xNetworkContext;
@@ -396,7 +392,6 @@ static void prvAzureDemoTask(void *pvParameters)
             xResult = AzureIoTHubClient_OptionsInit(&xHubOptions);
             configASSERT(xResult == eAzureIoTSuccess);
 
-            xHubOptions.pucModuleID = (const uint8_t *)"";
             xHubOptions.ulModuleIDLength = 0;
             xHubOptions.pucModelID = (const uint8_t *)sampleazureiotMODEL_ID;
             xHubOptions.ulModelIDLength = sizeof(sampleazureiotMODEL_ID) - 1;

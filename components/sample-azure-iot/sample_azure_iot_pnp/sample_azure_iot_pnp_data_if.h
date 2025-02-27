@@ -40,23 +40,6 @@ uint32_t ulCreateReportedPropertiesUpdate( uint8_t * pucPropertiesData,
                                            uint32_t ulPropertiesDataSize );
 
 /**
- * @brief Handles a Command received from the Azure IoT Hub.
- *
- * @remark This function must be implemented by the specific sample.
- *
- * @param[in]  pxMessage                          Pointer to a structure that holds details of the Command.
- * @param[out] pulResponseStatus                  Status code to be sent as response for Command request.
- * @param[out] pucCommandResponsePayloadBuffer    Buffer in which to write a payload for the Command response.
- * @param[in]  ulCommandResponsePayloadBufferSize Total size of `ucCommandResponsePayloadBuffer`.
- *
- * @return uint32_t Number of bytes written to `ucCommandResponsePayloadBuffer`.
- */
-uint32_t ulHandleCommand( AzureIoTHubClientCommandRequest_t * pxMessage,
-                          uint32_t * pulResponseStatus,
-                          uint8_t * pucCommandResponsePayloadBuffer,
-                          uint32_t ulCommandResponsePayloadBufferSize );
-
-/**
  * @brief Handles a properties message received from the Azure IoT Hub (writable or get response).
  *
  * @remark This function must be implemented by the specific sample.
